@@ -32,12 +32,12 @@
         
         <!-- Navigation -->
         <nav class="hidden md:flex items-center gap-1">
-          <button class="tab-btn active" data-tab="home">Home</button>
-          <button class="tab-btn" data-tab="public-records">Public Records</button>
-          <button class="tab-btn" data-tab="penal-code">Penal Code</button>
-          <button class="tab-btn" data-tab="careers">Careers</button>
-          <button id="loginBtn" class="btn-secondary ml-2">Login</button>
-          <button id="logoutBtn" class="btn-secondary hidden">Logout</button>
+          <button id="homeNavBtn" class="tab-btn active">Home</button>
+          <button id="publicRecordsNavBtn" class="tab-btn">Public Records</button>
+          <button id="penalCodeNavBtn" class="tab-btn">Penal Code</button>
+          <button id="careersNavBtn" class="tab-btn">Careers</button>
+          <button id="loginNavBtn" class="btn-secondary ml-2">Login</button>
+          <button id="logoutBtn" class="btn-secondary ml-2 hidden">Logout</button>
         </nav>
         
         <!-- Notifications -->
@@ -50,26 +50,29 @@
 
     <!-- Mobile Navigation -->
     <nav class="md:hidden bg-slate-900 border-b border-slate-700 px-4 py-2 flex gap-2 overflow-x-auto">
-      <button class="tab-btn active whitespace-nowrap" data-tab="home">Home</button>
-      <button class="tab-btn whitespace-nowrap" data-tab="public-records">Records</button>
-      <button class="tab-btn whitespace-nowrap" data-tab="penal-code">Penal Code</button>
-      <button class="tab-btn whitespace-nowrap" data-tab="careers">Careers</button>
+      <button id="homeNavBtnMobile" class="tab-btn active whitespace-nowrap">Home</button>
+      <button id="publicRecordsNavBtnMobile" class="tab-btn whitespace-nowrap">Records</button>
+      <button id="penalCodeNavBtnMobile" class="tab-btn whitespace-nowrap">Penal Code</button>
+      <button id="careersNavBtnMobile" class="tab-btn whitespace-nowrap">Careers</button>
       <button id="loginBtnMobile" class="btn-secondary whitespace-nowrap">Login</button>
-      <button id="logoutBtnMobile" class="btn-secondary hidden whitespace-nowrap">Logout</button>
+      <button id="logoutBtnMobile" class="btn-secondary whitespace-nowrap hidden">Logout</button>
     </nav>
 
     <!-- Main Content Area -->
     <main class="max-w-7xl mx-auto px-4 py-6">
-      <!-- Tab Content Containers -->
-      <div id="home" class="tab-content active"></div>
-      <div id="public-records" class="tab-content"></div>
-      <div id="penal-code" class="tab-content"></div>
-      <div id="careers" class="tab-content"></div>
+      <!-- Sections (IDs MUST match JS expectations) -->
+      <div id="homeSection" class="section-content"></div>
+      <div id="publicRecordsSection" class="section-content hidden"></div>
+      <div id="penalCodeSection" class="section-content hidden"></div>
+      <div id="careersSection" class="section-content hidden"></div>
+      <div id="dashboardSection" class="section-content hidden">
+        <div id="roleContent"></div>
+      </div>
     </main>
   </div>
 
   <!-- Login Modal -->
-  <div id="loginOverlay" class="modal-overlay fixed inset-0 flex items-center justify-center p-4 hidden">
+  <div id="loginModal" class="modal-overlay fixed inset-0 flex items-center justify-center p-4 hidden">
     <div class="card w-full max-w-md">
       <h3 class="text-lg font-semibold mb-4">SSRP DOJ Portal Login</h3>
       <div class="space-y-4">
@@ -111,6 +114,13 @@
     </div>
   </div>
 
+  <!-- Global Modal (Used by showModal() for forms, threads, etc.) -->
+  <div id="globalModal" class="modal-overlay fixed inset-0 flex items-center justify-center p-4 hidden">
+    <div id="modalContent" class="card w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <!-- Dynamic content injected here by JS -->
+    </div>
+  </div>
+
   <!-- Notifications Panel -->
   <div id="notifPanel" class="fixed right-4 top-16 w-80 max-h-[80vh] bg-slate-900 border border-slate-700 rounded-xl shadow-xl hidden z-50 overflow-hidden">
     <div class="p-3 border-b border-slate-700 flex justify-between items-center">
@@ -122,36 +132,23 @@
     </div>
   </div>
 
-  <!-- JavaScript Files -->
-<!-- Load config FIRST (contains CONFIG, API_URLS, SPREADSHEET_IDS, etc.) -->
-<script src="js/config.js"></script>
-
-<!-- Utilities & helpers (no dependencies) -->
-<script src="js/utils.js"></script>
-
-<!-- Data layer: sheets & API wrappers (depend on config.js) -->
-<script src="js/sheets.js"></script>
-<script src="js/api.js"></script>
-
-<!-- Auth & core functionality (depend on api.js) -->
-<script src="js/auth.js"></script>
-<script src="js/navigation.js"></script>
-<script src="js/modals.js"></script>
-
-<!-- Feature modules (depend on api.js/adminCall) -->
-<script src="js/notifications.js"></script>
-<script src="js/communication.js"></script>
-<script src="js/availability.js"></script>
-<script src="js/reports.js"></script>
-
-<!-- Page renderers (depend on sheets.js for fetchSheetData) -->
-<script src="js/home.js"></script>
-<script src="js/public-records.js"></script>
-<script src="js/penal-code.js"></script>
-<script src="js/careers.js"></script>
-<script src="js/dashboard.js"></script>
-
-<!-- Entry point: initializes everything (MUST load last) -->
-<script src="js/main.js"></script>
+  <!-- JavaScript Files (Correct Load Order) -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/sheets.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/navigation.js"></script>
+  <script src="js/modals.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/communication.js"></script>
+  <script src="js/availability.js"></script>
+  <script src="js/reports.js"></script>
+  <script src="js/home.js"></script>
+  <script src="js/public-records.js"></script>
+  <script src="js/penal-code.js"></script>
+  <script src="js/careers.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/main.js"></script>
 </body>
 </html>
