@@ -10,12 +10,11 @@ const TIME_ZONE = "America/Chicago"; // Central Time for Texas-based SSRP
 const STORAGE_PREFIX = "ssrp_"; // Replaces 'sjrp_' for localStorage/session keys
 
 // 🔗 Google Apps Script Web App URLs (Deployed Endpoints)
-const API_URL = "https://script.google.com/macros/s/AKfycbz9qrRPkvAix02KdfH6e2oGjzlgOC7wk3iEBALCWSbYFPyf2L1E4NPtZp4t2AZMWq0llw/exec";
-const PENAL_CODE_API_URL = "https://script.google.com/macros/s/AKfycbwE_uHNWLGQe1RIoxAHlzSd8NYO2Zt4lKrxn5SynabmHgC-wyHxFO4oSb0sqnqb98BKgA/exec";
-const BAR_EXAM_API_URL = "https://script.google.com/macros/s/AKfycbyLqIR_dNlKTZsJZy1F6GnfwXewE3Flp9LAL78g5kVWs53PaOmQhiAsQXB7ToOOSLMfoQ/exec";
+const API_URL = https://script.google.com/macros/s/AKfycbwE_uHNWLGQe1RIoxAHlzSd8NYO2Zt4lKrxn5SynabmHgC-wyHxFO4oSb0sqnqb98BKgA/exec";
+const PENAL_CODE_API_URL = "https://script.google.com/macros/s/AKfycbwE_uHNWLGQe1RIoxAHlzSd8NYO2Zt4lKrxn5SynabmHgC-wyHxFO4oSb0sqnqb98BKgA/execc";
 
-// 🔑 Google Sheets API Key
-const SHEETS_API_KEY = "AKfycbz9qrRPkvAix02KdfH6e2oGjzlgOC7wk3iEBALCWSbYFPyf2L1E4NPtZp4t2AZMWq0llw";
+// Google Sheets API Key
+const SHEETS_API_KEY = 'AIzaSyAjWST6rOH_rF9Hspvf0j3xI8xdUZ3moYk'
 
 // 📊 Spreadsheet IDs
 const DOJ_DB_SPREADSHEET_ID = "1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc";
