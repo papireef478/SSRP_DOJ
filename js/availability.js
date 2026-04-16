@@ -1,9 +1,9 @@
 // ============================================
-// AVAILABILITY & SCHEDULING - SSRP (GLOBAL FUNCTIONS)
+// AVAILABILITY & SCHEDULING - GLOBAL FUNCTIONS
 // ============================================
 
 /**
- * Get pay period dates (2 weeks) - SSRP uses bi-weekly clerk schedules
+ * Get pay period dates (2 weeks)
  * @returns {object} Start and end dates
  */
 function getPayPeriodDates() {
@@ -23,7 +23,7 @@ function getPayPeriodDates() {
 }
 
 /**
- * Generate two-week calendar for SSRP clerk scheduling
+ * Generate two-week calendar
  * @returns {object} Week 1 and Week 2 arrays
  */
 function getTwoWeekCalendar() {
@@ -52,15 +52,14 @@ function getTwoWeekCalendar() {
 }
 
 /**
- * Load user availability from SSRP Admin Ops API
+ * Load user availability from API
  */
 async function loadUserAvailability() {
   if (!currentUser?.name) return;
   
   try {
     const { start, end } = getPayPeriodDates();
-    // ✅ SSRP: Use adminCall for Admin Ops endpoint
-    const result = await adminCall('getUserAvailability', {
+    const result = await apiCall('getUserAvailability', {
       user_name: currentUser.name,
       startDate: start.toISOString().slice(0, 10),
       endDate: end.toISOString().slice(0, 10)
@@ -68,30 +67,29 @@ async function loadUserAvailability() {
     
     userAvailability[currentUser.name] = result.availability || {};
   } catch (err) {
-    console.error('SSRP availability load error:', err);
+    console.error('Failed to load availability:', err);
     userAvailability[currentUser.name] = {};
   }
 }
 
 /**
- * Save user availability to SSRP Admin Ops API
+ * Save user availability to API
  * @param {Array} availabilityList - Array of {date, availability} objects
  */
 async function saveUserAvailability(availabilityList) {
   try {
-    // ✅ SSRP: Use adminCall for Admin Ops endpoint
-    await adminCall('saveUserAvailability', {
+    await apiCall('saveUserAvailability', {
       user_name: currentUser.name,
       availabilityList: availabilityList
     });
   } catch (err) {
-    console.error('SSRP availability save error:', err);
+    console.error('Failed to save availability:', err);
     throw err;
   }
 }
 
 /**
- * Render scheduling calendar UI - SSRP branded
+ * Render scheduling calendar UI
  * @returns {string} HTML string
  */
 function renderScheduling() {
@@ -102,7 +100,7 @@ function renderScheduling() {
   return `
     <div class="card p-6 mb-6">
       <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
-        <i data-lucide="calendar"></i> SSRP Clerk Scheduling
+        <i data-lucide="calendar"></i> Scheduling
       </div>
       <div class="space-y-4">
         <div class="grid grid-cols-7 gap-2 text-center text-sm">
@@ -118,10 +116,10 @@ function renderScheduling() {
           ${week2.map(d => `<div class="bg-gray-700 rounded p-1">${avail[d.dateStr] || '—'}</div>`).join('')}
         </div>
         <div class="text-xs text-gray-500 mt-2">
-          Pay period (Central Time): ${start.toLocaleDateString('en-US', { timeZone: CONFIG.timeZone })} – ${end.toLocaleDateString('en-US', { timeZone: CONFIG.timeZone })}
+          Pay period: ${start.toLocaleDateString()} – ${end.toLocaleDateString()}
         </div>
         <div class="flex flex-wrap gap-3 mt-2">
-          <button id="loaBtn" class="btn-secondary py-2 px-4 rounded-lg">Request LOA</button>
+          <button id="loaBtn" class="btn-secondary py-2 px-4 rounded-lg">Request Leave</button>
           <button id="availabilityBtn" class="btn-secondary py-2 px-4 rounded-lg">Update Availability</button>
         </div>
       </div>
@@ -130,7 +128,7 @@ function renderScheduling() {
 }
 
 /**
- * Show availability update form - SSRP branded
+ * Show availability update form
  */
 function showAvailabilityForm() {
   const { week1, week2 } = getTwoWeekCalendar();
@@ -139,7 +137,7 @@ function showAvailabilityForm() {
   const options = ['Morning', 'Afternoon', 'Evening', 'All Day', 'Not Available'];
   
   showModal(`
-    <h3 class="text-xl font-bold mb-4 text-white">Update SSRP Clerk Availability</h3>
+    <h3 class="text-xl font-bold mb-4 text-white">Update Availability</h3>
     <div class="space-y-2 max-h-64 overflow-y-auto">
       ${allDays.map(d => `
         <div class="flex items-center gap-2">
@@ -164,25 +162,24 @@ function showAvailabilityForm() {
     
     try {
       await saveUserAvailability(availabilityList);
-      alert('SSRP availability saved! Your schedule has been updated.');
+      alert('Availability saved!');
       closeModal('globalModal');
       await loadUserAvailability();
       
       // Re-render dashboard
       renderDashboardByRole();
     } catch (err) {
-      alert('Failed to save SSRP availability. Please try again or open a DOJ Ticket.');
+      alert('Failed to save availability. Please try again.');
     }
   });
 }
 
 /**
- * Initialize availability event listeners - SSRP
+ * Initialize availability event listeners
  */
 function initAvailability() {
   document.getElementById('availabilityBtn')?.addEventListener('click', showAvailabilityForm);
   document.getElementById('loaBtn')?.addEventListener('click', () => {
-    // ✅ SSRP: Reference correct Discord channel per Manual Section 26
-    alert('SSRP DOJ: LOA requests are handled via Discord ticket. Please open a DOJ Assistance ticket in #doj-assistance with your requested dates and reason.');
+    alert('LOA requests are handled via Discord ticket. Please submit a DOJ Assistance ticket.');
   });
 }

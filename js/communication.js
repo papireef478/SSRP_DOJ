@@ -3,8 +3,9 @@
 // ============================================================================
 async function fetchDOJUsersByRole(roleFilter) {
   try {
-    // ✅ SSRP: Use adminCall for Admin Ops endpoint (minimal change)
-    const result = await adminCall('getDOJUsers', { role: roleFilter });
+    const url = `${API_URL}?action=getDOJUsers&role=${encodeURIComponent(roleFilter)}`;
+    const response = await fetch(url);
+    const result = await response.json();
     return result.success ? result.users : [];
   } catch (err) {
     console.error('Failed to fetch users:', err);
@@ -80,7 +81,7 @@ function showCommunicationModal(targetRole, targetLabel) {
     `;
   }
   
-  // Show modal HTML (original structure preserved)
+  // Show modal HTML
   showModal(`
     <div class="p-4">
       <h3 class="text-xl font-bold mb-4 text-white">
@@ -244,8 +245,8 @@ function setupSendMessageHandler(targetRole, targetLabel, isReplyMode) {
       // ✅ Get thread_id if replying
       const threadId = document.getElementById('replyThreadId')?.value || null;
       
-      // ✅ SSRP: Use adminCall for Admin Ops endpoint - include urls array and thread_id
-      await adminCall('sendMessage', {
+      // Send via apiCall - ✅ include urls array and thread_id
+      await apiCall('sendMessage', {
         recipientNames: recipientsArray,
         message: body,
         sender: currentUser.name,
@@ -255,7 +256,7 @@ function setupSendMessageHandler(targetRole, targetLabel, isReplyMode) {
         thread_id: threadId  // ✅ Include thread_id for conversation grouping
       });
       
-      // Success feedback (original text preserved)
+      // Success feedback
       let msg;
       if (isReplyMode) {
         msg = `✅ Reply sent to ${recipient}.`;

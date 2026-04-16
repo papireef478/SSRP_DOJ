@@ -1,24 +1,26 @@
 /* ============================================
-BASE STYLES - SSRP DOJ PORTAL
-============================================ */
-body {
-  background: #0f172a;
-  font-family: 'Inter', sans-serif;
-  color: #e2e8f0;
+   BASE STYLES
+   ============================================ */
+
+body { 
+  background: #0f172a; 
+  font-family: 'Inter', sans-serif; 
+  color: #e2e8f0; 
   line-height: 1.5;
   margin: 0;
   padding: 0;
 }
 
 /* ============================================
-COMPONENTS
-============================================ */
+   COMPONENTS
+   ============================================ */
+
 /* Cards */
-.card {
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 1rem;
-  transition: all 0.2s;
+.card { 
+  background: #1e293b; 
+  border: 1px solid #334155; 
+  border-radius: 1rem; 
+  transition: all 0.2s; 
   padding: 1.5rem;
 }
 .card:hover {
@@ -27,10 +29,10 @@ COMPONENTS
 }
 
 /* Buttons */
-.btn-primary {
-  background: #e94560; /* SSRP accent red - unchanged */
-  transition: all 0.2s;
-  border-radius: 0.5rem;
+.btn-primary { 
+  background: #e94560; 
+  transition: all 0.2s; 
+  border-radius: 0.5rem; 
   border: none;
   color: white;
   font-weight: 500;
@@ -40,9 +42,9 @@ COMPONENTS
   justify-content: center;
   gap: 0.5rem;
 }
-.btn-primary:hover {
-  background: #c23456;
-  transform: translateY(-1px);
+.btn-primary:hover { 
+  background: #c23456; 
+  transform: translateY(-1px); 
   box-shadow: 0 4px 12px rgba(233, 69, 96, 0.3);
 }
 .btn-primary:disabled {
@@ -52,12 +54,12 @@ COMPONENTS
   opacity: 0.7;
 }
 
-.btn-secondary {
-  background: #334155;
-  border: 1px solid #475569;
-  color: #e2e8f0;
-  border-radius: 0.5rem;
-  transition: all 0.2s;
+.btn-secondary { 
+  background: #334155; 
+  border: 1px solid #475569; 
+  color: #e2e8f0; 
+  border-radius: 0.5rem; 
+  transition: all 0.2s; 
   font-weight: 500;
   cursor: pointer;
   display: inline-flex;
@@ -65,9 +67,9 @@ COMPONENTS
   justify-content: center;
   gap: 0.5rem;
 }
-.btn-secondary:hover {
-  background: #475569;
-  border-color: #facc15; /* SSRP accent gold - unchanged */
+.btn-secondary:hover { 
+  background: #475569; 
+  border-color: #facc15; 
   transform: translateY(-1px);
 }
 .btn-secondary:disabled,
@@ -80,26 +82,27 @@ COMPONENTS
   transform: none;
 }
 
-/* Notification Badge */
+/* Notification Badge - Enhanced */
 .notification-badge,
-#notifBadge {
-  position: absolute;
-  top: -5px;
-  right: -5px;
+#notifBadge { 
+  position: absolute; 
+  top: -5px; 
+  right: -5px; 
   background: #c9a227; /* Gold for unread */
-  color: white;
-  border-radius: 9999px;
-  width: 18px;
-  height: 18px;
-  font-size: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  color: white; 
+  border-radius: 9999px; 
+  width: 18px; 
+  height: 18px; 
+  font-size: 10px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
   font-weight: 600;
   z-index: 10;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
+/* Pulse animation for new notifications */
 @keyframes badgePulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.7; transform: scale(1.1); }
@@ -109,83 +112,93 @@ COMPONENTS
 }
 
 /* Modal Overlay */
-.modal-overlay {
-  background: rgba(0,0,0,0.7);
-  backdrop-filter: blur(4px);
+.modal-overlay { 
+  background: rgba(0,0,0,0.7); 
+  backdrop-filter: blur(4px); 
   z-index: 50;
 }
 
 /* ============================================
-TABS
-============================================ */
-.tab-btn {
-  background: transparent;
-  border: none;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  font-weight: 500;
-  color: #94a3b8;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
+   TABS
+   ============================================ */
+
+.tab-btn { 
+  background: transparent; 
+  border: none; 
+  padding: 0.5rem 1rem; 
+  cursor: pointer; 
+  font-weight: 500; 
+  color: #94a3b8; 
+  border-bottom: 2px solid transparent; 
+  border-radius: 0; 
   transition: color 0.2s, border-color 0.2s;
 }
 .tab-btn:hover {
   color: #e2e8f0;
 }
-.tab-btn.active {
-  color: #facc15;
-  border-bottom-color: #facc15;
+.tab-btn.active { 
+  color: #facc15; 
+  border-bottom-color: #facc15; 
 }
-.tab-content {
-  display: none;
+
+.tab-content { 
+  display: none; 
 }
-.tab-content.active {
-  display: block;
+.tab-content.active { 
+  display: block; 
   animation: fadeIn 0.3s ease;
 }
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 /* ============================================
-DATA TABLES
-============================================ */
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
+   DATA TABLES
+   ============================================ */
+
+.data-table { 
+  width: 100%; 
+  border-collapse: collapse; 
   font-size: 0.875rem;
 }
-.data-table th {
-  text-align: left;
-  padding: 0.75rem 0.5rem;
-  background: #0f172a;
-  color: #facc15;
-  border-bottom: 2px solid #334155;
+
+.data-table th { 
+  text-align: left; 
+  padding: 0.75rem 0.5rem; 
+  background: #0f172a; 
+  color: #facc15; 
+  border-bottom: 2px solid #334155; 
   font-weight: 600;
   position: sticky;
   top: 0;
   z-index: 5;
 }
-.data-table td {
-  padding: 0.75rem 0.5rem;
-  border-bottom: 1px solid #334155;
+
+.data-table td { 
+  padding: 0.75rem 0.5rem; 
+  border-bottom: 1px solid #334155; 
 }
-.data-table tr:hover {
-  background: #334155;
+
+.data-table tr:hover { 
+  background: #334155; 
 }
 
 /* ============================================
-FORM INPUTS
-============================================ */
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+   FORM INPUTS
+   ============================================ */
+
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  margin: 0; 
 }
-input[type=number] {
-  -moz-appearance: textfield;
+
+input[type=number] { 
+  -moz-appearance: textfield; 
 }
+
 input, textarea, select {
   transition: border-color 0.2s, box-shadow 0.2s;
   background: #1e293b;
@@ -204,110 +217,163 @@ input::placeholder, textarea::placeholder {
 }
 
 /* ============================================
-PENAL CODE TABLE
-============================================ */
-.penal-code-table {
-  max-height: 70vh;
-  overflow-y: auto;
-  display: block;
+   PENAL CODE TABLE
+   ============================================ */
+
+.penal-code-table { 
+  max-height: 70vh; 
+  overflow-y: auto; 
+  display: block; 
 }
 
 /* ============================================
-ACCORDION
-============================================ */
-.accordion-header {
-  cursor: pointer;
-  background: #0f172a;
-  border-radius: 0.5rem;
-  transition: background 0.2s;
+   ACCORDION
+   ============================================ */
+
+.accordion-header { 
+  cursor: pointer; 
+  background: #0f172a; 
+  border-radius: 0.5rem; 
+  transition: background 0.2s; 
   padding: 0.75rem 1rem;
 }
-.accordion-header:hover {
-  background: #334155;
+
+.accordion-header:hover { 
+  background: #334155; 
 }
-.accordion-content {
-  display: none;
-  overflow-x: auto;
+
+.accordion-content { 
+  display: none; 
+  overflow-x: auto; 
   padding: 1rem;
 }
-.accordion-content.active {
-  display: block;
+
+.accordion-content.active { 
+  display: block; 
   animation: slideDown 0.3s ease;
 }
+
 @keyframes slideDown {
   from { opacity: 0; max-height: 0; }
   to { opacity: 1; max-height: 1000px; }
 }
 
 /* ============================================
-SPLASH SCREEN
-============================================ */
-#splashScreen {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: #0f172a;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.5s;
-}
-#mainContent {
-  display: none;
+   SPLASH SCREEN
+   ============================================ */
+
+#splashScreen { 
+  position: fixed; 
+  top: 0; 
+  left: 0; 
+  width: 100%; 
+  height: 100%; 
+  background: #0f172a; 
+  z-index: 1000; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  transition: opacity 0.5s; 
 }
 
-/* ============================================
-STATUS COLORS
-============================================ */
-.status-active { color: #22c55e; font-weight: 600; }
-.status-pending { color: #eab308; font-weight: 600; }
-.status-dissolved { color: #ef4444; font-weight: 600; }
-.status-separation { color: #f97316; font-weight: 600; }
-.status-expired { color: #ef4444; font-weight: 600; }
-
-/* ============================================
-PENAL CODE DESCRIPTION COLUMN
-============================================ */
-.data-table td.desc-col {
-  max-width: 250px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+#mainContent { 
+  display: none; 
 }
 
 /* ============================================
-SCROLLBAR STYLING
-============================================ */
+   STATUS COLORS
+   ============================================ */
+
+.status-active { 
+  color: #22c55e; 
+  font-weight: 600; 
+}
+
+.status-pending { 
+  color: #eab308; 
+  font-weight: 600; 
+}
+
+.status-dissolved { 
+  color: #ef4444; 
+  font-weight: 600; 
+}
+
+.status-separation { 
+  color: #f97316; 
+  font-weight: 600; 
+}
+
+.status-expired { 
+  color: #ef4444; 
+  font-weight: 600; 
+}
+
+/* ============================================
+   PENAL CODE DESCRIPTION COLUMN
+   ============================================ */
+
+.data-table td.desc-col { 
+  max-width: 250px; 
+  white-space: nowrap; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+}
+
+/* ============================================
+   SCROLLBAR STYLING
+   ============================================ */
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
+
 ::-webkit-scrollbar-track {
   background: #1e293b;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #475569;
   border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: #64748b;
 }
 
-#notifList::-webkit-scrollbar { width: 6px; }
-#notifList::-webkit-scrollbar-track { background: #1e293b; }
-#notifList::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
-#notifList::-webkit-scrollbar-thumb:hover { background: #64748b; }
+/* Notifications panel scrollbar */
+#notifList::-webkit-scrollbar {
+  width: 6px;
+}
+#notifList::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+#notifList::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 3px;
+}
+#notifList::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
 
-#threadMessages::-webkit-scrollbar { width: 6px; }
-#threadMessages::-webkit-scrollbar-track { background: #0f172a; }
-#threadMessages::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+/* Thread messages scrollbar */
+#threadMessages::-webkit-scrollbar {
+  width: 6px;
+}
+#threadMessages::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+#threadMessages::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
 
 /* ============================================
-NOTIFICATIONS PANEL - ENHANCED
-============================================ */
+   NOTIFICATIONS PANEL - ENHANCED
+   ============================================ */
+
+/* Unread indicator dot */
 .notification-unread-dot {
   position: absolute;
   left: 0.75rem;
@@ -318,9 +384,13 @@ NOTIFICATIONS PANEL - ENHANCED
   border-radius: 50%;
   animation: pulse 2s infinite;
 }
+
+/* Notification item hover states */
 #notifList [data-id]:hover {
   background: #334155 !important;
 }
+
+/* Action buttons in notifications */
 #notifList button {
   font-size: 0.75rem;
   padding: 0.25rem 0.5rem;
@@ -334,6 +404,8 @@ NOTIFICATIONS PANEL - ENHANCED
   text-decoration: underline;
   background: rgba(255, 255, 255, 0.1);
 }
+
+/* Expired notification styling */
 .notification-expired {
   opacity: 0.5;
 }
@@ -341,12 +413,16 @@ NOTIFICATIONS PANEL - ENHANCED
   text-decoration: line-through;
   color: #64748b;
 }
+
+/* Thread view message bubbles */
 .thread-message {
   transition: background-color 0.2s;
 }
 .thread-message:hover {
   background-color: #334155;
 }
+
+/* Reply input styling */
 #threadReply {
   resize: vertical;
   min-height: 60px;
@@ -354,19 +430,24 @@ NOTIFICATIONS PANEL - ENHANCED
 }
 
 /* ============================================
-LOGIN OVERLAY STYLES
-============================================ */
+   🔥 LOGIN OVERLAY STYLES 🔥
+   ============================================ */
 #loginOverlay {
   transition: opacity 0.3s ease;
 }
+
 #loginOverlay.hidden {
   opacity: 0;
   pointer-events: none;
 }
+
+/* Loading animation for the scale icon */
 @keyframes pulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.05); }
 }
+
+/* Loading spinner animation */
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -376,42 +457,50 @@ LOGIN OVERLAY STYLES
 }
 
 /* ============================================
-AVAILABILITY CALENDAR
-============================================ */
+   AVAILABILITY CALENDAR
+   ============================================ */
+
 .availability-morning { color: #60a5fa; }
 .availability-afternoon { color: #fbbf24; }
 .availability-evening { color: #a78bfa; }
 .availability-unavailable,
-.availability-off {
-  color: #ef4444;
-  text-decoration: line-through;
+.availability-off { 
+  color: #ef4444; 
+  text-decoration: line-through; 
 }
 .availability-available { color: #94a3b8; }
 
 /* ============================================
-TASK CHECKBOXES
-============================================ */
+   TASK CHECKBOXES
+   ============================================ */
+
 .task-checkbox {
   width: 1rem;
   height: 1rem;
   accent-color: #c9a227;
   cursor: pointer;
 }
+
 .task-checkbox:checked + span {
   text-decoration: line-through;
   color: #64748b;
 }
 
 /* ============================================
-COMMUNICATION MODAL
-============================================ */
+   COMMUNICATION MODAL
+   ============================================ */
+
 #recipientSelect {
   min-height: 2.5rem;
   width: 100%;
 }
+
+/* Message subject input */
 #messageSubject {
   width: 100%;
 }
+
+/* Message body textarea */
 #messageBody {
   width: 100%;
   min-height: 100px;
@@ -419,24 +508,32 @@ COMMUNICATION MODAL
 }
 
 /* ============================================
-MESSAGE THREAD VIEW
-============================================ */
+   MESSAGE THREAD VIEW
+   ============================================ */
+
+/* Message bubble for current user */
 .thread-message-current {
   background: rgba(201, 162, 39, 0.2);
   border: 1px solid #c9a227;
   border-radius: 1rem 1rem 0 1rem;
   max-width: 85%;
 }
+
+/* Message bubble for other user */
 .thread-message-other {
   background: #334155;
   border: 1px solid #475569;
   border-radius: 1rem 1rem 1rem 0;
   max-width: 85%;
 }
+
+/* Timestamp in messages */
 .message-timestamp {
   font-size: 0.75rem;
   color: #94a3b8;
 }
+
+/* Announcement label */
 .announcement-badge {
   background: #8b5cf6;
   color: white;
@@ -447,20 +544,26 @@ MESSAGE THREAD VIEW
 }
 
 /* ============================================
-RESPONSIVE UTILITIES
-============================================ */
+   RESPONSIVE UTILITIES
+   ============================================ */
+
 @media (max-width: 768px) {
-  .card { padding: 1rem !important; }
+  .card {
+    padding: 1rem !important;
+  }
+  
   .data-table {
     font-size: 0.875rem;
     display: block;
     overflow-x: auto;
   }
+  
   .data-table th,
   .data-table td {
     padding: 0.5rem 0.25rem;
     white-space: nowrap;
   }
+  
   #notifPanel {
     right: 0 !important;
     left: 0 !important;
@@ -468,28 +571,50 @@ RESPONSIVE UTILITIES
     max-width: none !important;
     max-height: 80vh;
   }
+  
   .thread-message-current,
-  .thread-message-other { max-width: 95%; }
-  .flex-wrap.gap-3 { flex-direction: column; }
+  .thread-message-other {
+    max-width: 95%;
+  }
+  
+  /* Stack buttons on mobile */
+  .flex-wrap.gap-3 {
+    flex-direction: column;
+  }
+  
   .btn-primary,
   .btn-secondary {
     width: 100%;
     justify-content: center;
   }
 }
+
 @media (max-width: 480px) {
-  .card { padding: 0.75rem !important; }
-  h1, h2, h3 { font-size: 1.25rem !important; }
-  .data-table .hide-mobile { display: none; }
+  .card {
+    padding: 0.75rem !important;
+  }
+  
+  h1, h2, h3 {
+    font-size: 1.25rem !important;
+  }
+  
+  /* Hide less important columns on very small screens */
+  .data-table .hide-mobile {
+    display: none;
+  }
 }
 
 /* ============================================
-ACCESSIBILITY
-============================================ */
+   ACCESSIBILITY
+   ============================================ */
+
+/* Focus visible for keyboard navigation */
 :focus-visible {
   outline: 2px solid #facc15;
   outline-offset: 2px;
 }
+
+/* Skip link for keyboard users */
 .skip-link {
   position: absolute;
   top: -40px;
@@ -500,8 +625,11 @@ ACCESSIBILITY
   z-index: 100;
   transition: top 0.3s;
 }
-.skip-link:focus { top: 0; }
+.skip-link:focus {
+  top: 0;
+}
 
+/* Reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -512,28 +640,45 @@ ACCESSIBILITY
   }
 }
 
+/* High contrast mode support */
 @media (prefers-contrast: high) {
-  .card { border-color: #facc15; }
-  .btn-primary { border: 2px solid white; }
-  .btn-secondary { border-color: #facc15; }
+  .card {
+    border-color: #facc15;
+  }
+  
+  .btn-primary {
+    border: 2px solid white;
+  }
+  
+  .btn-secondary {
+    border-color: #facc15;
+  }
 }
 
 /* ============================================
-PRINT STYLES
-============================================ */
+   PRINT STYLES
+   ============================================ */
+
 @media print {
   body {
     background: white;
     color: black;
   }
+  
   .card {
     background: white;
     border: 1px solid #ccc;
     box-shadow: none;
   }
+  
   .btn-primary,
-  .btn-secondary { display: none; }
+  .btn-secondary {
+    display: none;
+  }
+  
   #notifPanel,
   #splashScreen,
-  #loginOverlay { display: none !important; }
+  #loginOverlay {
+    display: none !important;
+  }
 }

@@ -1,10 +1,10 @@
 // ============================================================================
-// NOTIFICATIONS SYSTEM - SSRP (ENHANCED WITH ACTIONS & VISUAL INDICATORS)
+// NOTIFICATIONS SYSTEM - ENHANCED WITH ACTIONS & VISUAL INDICATORS
 // ============================================================================
 // NOTE: dojNotifications is declared in config.js - DO NOT redeclare here!
 
 /**
- * Load SSRP notifications from API for current user
+ * Load notifications from API for current user
  */
 async function loadNotifications() {
   if (!currentUser?.name) return;
@@ -15,8 +15,7 @@ async function loadNotifications() {
   }
   
   try {
-    // ✅ SSRP: Use adminCall for Admin Ops endpoint
-    const result = await adminCall('getNotifications', { user_name: currentUser.name });
+    const result = await apiCall('getNotifications', { user_name: currentUser.name });
     
     dojNotifications.length = 0;
     dojNotifications.push(...(result.notifications || []));
@@ -33,7 +32,7 @@ async function loadNotifications() {
     renderDojNotifications();
     
   } catch (err) {
-    console.error('SSRP failed to load notifications:', err);
+    console.error('Failed to load notifications:', err);
     if (container) {
       container.innerHTML = '<div class="text-red-400 text-sm text-center py-4">Error loading notifications</div>';
     }
@@ -41,7 +40,7 @@ async function loadNotifications() {
 }
 
 /**
- * Update SSRP notification badge count with visual pulse for new messages
+ * Update notification badge count with visual pulse for new messages
  */
 function updateNotificationBadge() {
   const badge = document.getElementById('notifBadge');
@@ -63,7 +62,7 @@ function updateNotificationBadge() {
 }
 
 /**
- * Render SSRP notification dropdown panel with action buttons
+ * Render notification dropdown panel with action buttons
  */
 function renderNotificationPanel() {
   const list = document.getElementById('notifList');
@@ -152,8 +151,7 @@ function renderNotificationPanel() {
         updateNotificationBadge();  // Update badge instantly
         renderNotificationPanel();  // Re-render panel
         renderDojNotifications();  // Re-render dashboard
-        // ✅ SSRP: Use adminCall for Admin Ops endpoint
-        adminCall('markNotificationRead', { id }).catch(err => console.error('Failed to sync read status:', err));
+        apiCall('markNotificationRead', { id }).catch(err => console.error('Failed to sync read status:', err));
       }
       
       // Open thread view for reading
@@ -165,7 +163,7 @@ function renderNotificationPanel() {
 }
 
 /**
- * Render SSRP notifications in dashboard (latest 5)
+ * Render notifications in dashboard (latest 5)
  */
 function renderDojNotifications() {
   const container = document.getElementById('dojNotificationsContainer');
@@ -229,7 +227,7 @@ function renderDojNotifications() {
 }
 
 /**
- * Mark an SSRP notification as read via API - ✅ Updates badge instantly
+ * Mark a notification as read via API - ✅ Updates badge instantly
  */
 async function markNotificationRead(id) {
   try {
@@ -240,15 +238,14 @@ async function markNotificationRead(id) {
       renderNotificationPanel();
       renderDojNotifications();
     }
-    // ✅ SSRP: Use adminCall for Admin Ops endpoint
-    await adminCall('markNotificationRead', { id });
+    await apiCall('markNotificationRead', { id });
   } catch (err) {
-    console.error('SSRP failed to mark notification read:', err);
+    console.error('Failed to mark notification read:', err);
   }
 }
 
 /**
- * Reply to an SSRP notification - Works for ANY sender, pre-fills subject/message
+ * Reply to a notification - Works for ANY sender, pre-fills subject/message
  */
 function replyToNotification(senderName, threadId = '') {
   if (!senderName || senderName === 'Unknown') {
@@ -278,42 +275,40 @@ function replyToNotification(senderName, threadId = '') {
 }
 
 /**
- * Delete an SSRP notification
+ * Delete a notification
  */
 async function deleteNotification(id) {
   if (!confirm('Delete this notification?')) return;
   try {
-    // ✅ SSRP: Use adminCall for Admin Ops endpoint
-    await adminCall('markNotificationRead', { id });
+    await apiCall('markNotificationRead', { id });
     const index = dojNotifications.findIndex(n => n.id === id);
     if (index > -1) dojNotifications.splice(index, 1);
     updateNotificationBadge();
     renderNotificationPanel();
     renderDojNotifications();
   } catch (err) {
-    console.error('SSRP failed to delete notification:', err);
+    console.error('Failed to delete notification:', err);
     alert('Could not delete notification. Please try again.');
   }
 }
 
 /**
- * Send an SSRP notification to a role
+ * Send a notification to a role
  */
 async function sendNotificationToRole(role, message) {
   try {
-    // ✅ SSRP: Use adminCall for Admin Ops endpoint
-    await adminCall('sendMessage', {
+    await apiCall('sendMessage', {
       recipientNames: [role],
       message: message,
       sender: currentUser?.name || 'System'
     });
   } catch (err) {
-    console.error('SSRP failed to send notification:', err);
+    console.error('Failed to send notification:', err);
   }
 }
 
 /**
- * Open SSRP thread view modal showing full conversation - ✅ Shows subject + URLs + PRIVACY
+ * Open thread view modal showing full conversation - ✅ Shows subject + URLs + PRIVACY
  */
 async function openThreadView(threadId, otherUser = '') {
   if (!threadId) return;
@@ -330,8 +325,7 @@ async function openThreadView(threadId, otherUser = '') {
   
   try {
     // ✅ FIX: Pass requestingUser for privacy filtering (backend filters to sender/recipient only)
-    // ✅ SSRP: Use adminCall for Admin Ops endpoint
-    const result = await adminCall('getMessagesByThread', { 
+    const result = await apiCall('getMessagesByThread', { 
       thread_id: threadId,
       user_name: currentUser.name  // ✅ Critical for privacy
     });
@@ -438,8 +432,7 @@ async function openThreadView(threadId, otherUser = '') {
         }
         
         try {
-          // ✅ SSRP: Use adminCall for Admin Ops endpoint
-          await adminCall('sendMessage', {
+          await apiCall('sendMessage', {
             recipientNames: [conversationPartner],
             message: replyText,
             sender: currentUser.name,
@@ -466,7 +459,7 @@ async function openThreadView(threadId, otherUser = '') {
     }
     
   } catch (err) {
-    console.error('SSRP failed to load thread:', err);
+    console.error('Failed to load thread:', err);
     showModal(`
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-xl font-bold text-white">💬 Error</h3>
@@ -478,7 +471,7 @@ async function openThreadView(threadId, otherUser = '') {
 }
 
 /**
- * Quick reply from SSRP thread view
+ * Quick reply from thread view
  */
 function quickReply(recipientName, threadId) {
   const threadMsgs = dojNotifications.filter(n => n.thread_id === threadId);
@@ -490,7 +483,7 @@ function quickReply(recipientName, threadId) {
 }
 
 /**
- * Initialize SSRP notification panel - ✅ Auto-refresh every 4 minutes + ✅ Auto-load on init
+ * Initialize notification panel - ✅ Auto-refresh every 4 minutes + ✅ Auto-load on init
  */
 function initNotificationPanel() {
   const notifBtn = document.getElementById('notifBtn');

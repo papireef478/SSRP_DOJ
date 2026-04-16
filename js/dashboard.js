@@ -1,9 +1,9 @@
 // ============================================
-// DASHBOARD - ALL ROLES WITH REAL API (SSRP)
+// DASHBOARD - ALL ROLES WITH REAL API
 // ============================================
 
 /**
- * Render SSRP dashboard based on user role
+ * Render dashboard based on user role
  */
 async function renderDashboardByRole() {
   const roleContent = document.getElementById('roleContent');
@@ -11,15 +11,14 @@ async function renderDashboardByRole() {
   
   const role = currentUser.role;
   
-  // Load real tasks for clerks - SSRP Admin Ops
+  // Load real tasks for clerks
   let tasks = [];
   if (role === 'clerk') {
     try {
-      // ✅ SSRP: Use adminCall for Admin Ops endpoint
-      const tasksData = await adminCall('getClerkTasks');
+      const tasksData = await apiCall('getClerkTasks');
       tasks = tasksData.tasks || [];
     } catch (err) {
-      console.error('SSRP failed to load clerk tasks:', err);
+      console.error('Failed to load clerk tasks:', err);
       // Fallback to mock tasks if API fails
       tasks = [
         { id: 1, task: "Check Discord tickets", due: "Today", status: "pending" },
@@ -31,7 +30,7 @@ async function renderDashboardByRole() {
   }
   
   // Tasks HTML (for roles that have tasks)
-  const rolesWithTasks = ['clerk', 'judge', 'attorney', 'public_defender', 'district_attorney', 'bailiff', 'reporter', 'admin', 'chief_justice'];
+  const rolesWithTasks = ['clerk', 'judge', 'attorney', 'public_defender', 'district_attorney', 'bailiff', 'marshal', 'reporter', 'admin', 'chief_justice'];
   const tasksHtml = rolesWithTasks.includes(role) ? `
     <div class="card p-6 mb-6">
       <div class="flex justify-between items-center mb-4">
@@ -84,7 +83,7 @@ async function renderDashboardByRole() {
       <button id="sendToMasterClerkBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Master Clerk</button>
       <button id="sendToCJBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Chief Justice</button>
     `;
-  } else if (role === 'bailiff' || role === 'reporter') {
+  } else if (role === 'bailiff' || role === 'marshal' || role === 'reporter') {
     commButtons = `
       <button id="sendToClerkBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Clerk</button>
       <button id="sendToCJBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Chief Justice</button>
@@ -102,7 +101,7 @@ async function renderDashboardByRole() {
       <button id="sendToDABtn" class="btn-secondary py-2 px-4 rounded-lg">Send to District Attorney</button>
     `;
   } else {
-    // ✅ DEFAULT CASE: Every role gets basic communication buttons
+    // ✅ DEFAULT CASE: Every role gets basic communication buttons (per PDF request)
     commButtons = `
       <button id="sendToClerkBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Clerk</button>
       <button id="sendToCJBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Chief Justice</button>
@@ -128,14 +127,14 @@ async function renderDashboardByRole() {
           <i data-lucide="file-plus"></i> New Filing
         </div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=59417065" target="_blank" class="btn-secondary text-center py-2 rounded-lg">📄 Case Filing</a>
-          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1895005036" target="_blank" class="btn-secondary text-center py-2 rounded-lg">💍 Marriage</a>
-          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1376146295" target="_blank" class="btn-secondary text-center py-2 rounded-lg">🚗 Property</a>
-          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1538730298" target="_blank" class="btn-secondary text-center py-2 rounded-lg">🏢 Professional</a>
-          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1478971826" target="_blank" class="btn-secondary text-center py-2 rounded-lg">👶 Paternity</a>
-          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1874312862" target="_blank" class="btn-secondary text-center py-2 rounded-lg">📜 Will</a>
-          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=318970083" target="_blank" class="btn-secondary text-center py-2 rounded-lg">💰 Treasury</a>
-          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=394849338" target="_blank" class="btn-secondary text-center py-2 rounded-lg">📊 All Sheets</a>
+          <a href="https://docs.google.com/spreadsheets/d/12lS_UYvFlRPzwZrEgRLVlYfAZxWhfK-cczslEqf9jhE/edit?gid=59417065" target="_blank" class="btn-secondary text-center py-2 rounded-lg">📄 Case Filing</a>
+          <a href="https://docs.google.com/spreadsheets/d/12lS_UYvFlRPzwZrEgRLVlYfAZxWhfK-cczslEqf9jhE/edit?gid=1895005036" target="_blank" class="btn-secondary text-center py-2 rounded-lg">💍 Marriage</a>
+          <a href="https://docs.google.com/spreadsheets/d/12lS_UYvFlRPzwZrEgRLVlYfAZxWhfK-cczslEqf9jhE/edit?gid=1376146295" target="_blank" class="btn-secondary text-center py-2 rounded-lg">🚗 Property</a>
+          <a href="https://docs.google.com/spreadsheets/d/12lS_UYvFlRPzwZrEgRLVlYfAZxWhfK-cczslEqf9jhE/edit?gid=1538730298" target="_blank" class="btn-secondary text-center py-2 rounded-lg">🏢 Professional</a>
+          <a href="https://docs.google.com/spreadsheets/d/12lS_UYvFlRPzwZrEgRLVlYfAZxWhfK-cczslEqf9jhE/edit?gid=1478971826" target="_blank" class="btn-secondary text-center py-2 rounded-lg">👶 Paternity</a>
+          <a href="https://docs.google.com/spreadsheets/d/12lS_UYvFlRPzwZrEgRLVlYfAZxWhfK-cczslEqf9jhE/edit?gid=1874312862" target="_blank" class="btn-secondary text-center py-2 rounded-lg">📜 Will</a>
+          <a href="https://docs.google.com/spreadsheets/d/12lS_UYvFlRPzwZrEgRLVlYfAZxWhfK-cczslEqf9jhE/edit?gid=318970083" target="_blank" class="btn-secondary text-center py-2 rounded-lg">💰 Treasury</a>
+          <a href="${allFilingsSheetUrl}" target="_blank" class="btn-secondary text-center py-2 rounded-lg">📊 All Sheets</a>
         </div>
       </div>
       <div class="card p-6 mb-6">
@@ -143,8 +142,8 @@ async function renderDashboardByRole() {
           <i data-lucide="dollar-sign"></i> Financial Tools
         </div>
         <div class="flex flex-wrap gap-3">
-          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1869397302" target="_blank" class="btn-secondary py-2 px-4 rounded-lg">Manage Offline Dues</a>
-          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=394849338" target="_blank" class="btn-secondary py-2 px-4 rounded-lg">View All Filings (Audit)</a>
+          <a href="${offlineDuesSheetUrl}" target="_blank" class="btn-secondary py-2 px-4 rounded-lg">Manage Offline Dues</a>
+          <a href="${allFilingsSheetUrl}" target="_blank" class="btn-secondary py-2 px-4 rounded-lg">View All Filings (Audit)</a>
         </div>
       </div>
       <!-- ✅ AUDIT TOOLS PLACEHOLDER BUTTONS -->
@@ -241,6 +240,31 @@ async function renderDashboardByRole() {
         <button id="serviceProcessBtn" class="btn-secondary py-2 px-4 rounded-lg">Manage Service of Process</button>
       </div>
     `;
+} else if (role === 'marshal') {
+  roleSpecific = `
+    <div class="card p-6 mb-6">
+      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+        <i data-lucide="badge"></i> U.S. Marshal Dashboard
+      </div>
+      <p class="text-gray-300 mb-4">Federal court security, prisoner transport, and warrant service.</p>
+    </div>
+    <div class="card p-6 mb-6">
+      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+        <i data-lucide="truck"></i> Transport & Security
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <button id="transportRequestBtn" class="btn-secondary py-2 px-4 rounded-lg">Request Prisoner Transport</button>
+        <button id="warrantServiceBtn" class="btn-secondary py-2 px-4 rounded-lg">Serve Federal Warrant</button>
+        <button id="manhuntReportBtn" class="btn-secondary py-2 px-4 rounded-lg">Report Manhunt Status</button>
+      </div>
+    </div>
+    <div class="card p-6 mb-6">
+      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+        <i data-lucide="clipboard"></i> Court Security Log
+      </div>
+      <button id="securityLogBtn" class="btn-secondary py-2 px-4 rounded-lg">Submit Security Report</button>
+    </div>
+  `;
   } else if (role === 'reporter') {
     roleSpecific = `
       <div class="card p-6 mb-6">
@@ -277,7 +301,7 @@ async function renderDashboardByRole() {
         <div class="flex flex-wrap gap-3">
           <button id="financialAuditBtn" class="btn-secondary py-2 px-4 rounded-lg">Financial Summary</button>
           <button id="offlineDuesBtn" class="btn-secondary py-2 px-4 rounded-lg">Offline Dues</button>
-          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=394849338" target="_blank" class="btn-secondary py-2 px-4 rounded-lg">Audit Log (All Filings)</a>
+          <a href="${allFilingsSheetUrl}" target="_blank" class="btn-secondary py-2 px-4 rounded-lg">Audit Log (All Filings)</a>
           <!-- ✅ AUDIT TOOLS PLACEHOLDER BUTTONS -->
           <button id="cleanupFilesBtn" class="btn-secondary py-2 px-4 rounded-lg opacity-75 cursor-not-allowed" title="Coming soon">🧹 Clean-up Files</button>
           <button id="issueMarriageBtn" class="btn-secondary py-2 px-4 rounded-lg opacity-75 cursor-not-allowed" title="Coming soon">💒 Issue Marriage Certificates</button>
@@ -346,7 +370,7 @@ async function renderDashboardByRole() {
 }
 
 /**
- * Attach SSRP dashboard event listeners
+ * Attach dashboard event listeners
  * @param {string} role - User's role
  */
 function attachDashboardEventListeners(role) {
@@ -354,8 +378,7 @@ function attachDashboardEventListeners(role) {
   document.getElementById('refreshTasks')?.addEventListener('click', async () => {
     if (role === 'clerk') {
       try {
-        // ✅ SSRP: Use adminCall for Admin Ops endpoint
-        const tasksData = await adminCall('getClerkTasks');
+        const tasksData = await apiCall('getClerkTasks');
         if (tasksData.tasks?.length > 0) {
           const tasksList = document.getElementById('tasksList');
           if (tasksList) {
@@ -370,7 +393,7 @@ function attachDashboardEventListeners(role) {
           alert('✅ Tasks refreshed!');
         }
       } catch (err) {
-        console.error('SSRP failed to refresh tasks:', err);
+        console.error('Failed to refresh tasks:', err);
         alert('❌ Failed to refresh tasks');
       }
     }
@@ -381,20 +404,48 @@ function attachDashboardEventListeners(role) {
     cb.addEventListener('change', async () => {
       if (role === 'clerk') {
         try {
-          // ✅ SSRP: Use adminCall for Admin Ops endpoint
-          await adminCall('updateClerkTask', {
+          await apiCall('updateClerkTask', {
             id: parseInt(cb.dataset.id),
             status: cb.checked ? 'done' : 'pending',
             completed_by: currentUser.name
           });
         } catch (err) {
-          console.error('SSRP failed to update task:', err);
+          console.error('Failed to update task:', err);
           // Revert checkbox on error
           cb.checked = !cb.checked;
         }
       }
     });
   });
+
+/**
+ * U.S. Marshal Functions
+ * Replace the alerts with actual API calls or modal forms.
+ */
+
+function requestTransport() {
+  alert(`🚔 Prisoner Transport Request (coming soon)\n\nSubmit a request to transport a prisoner from Bolingbroke Penitentiary to court.`);
+  // TODO: Open a modal with fields: prisoner name, case number, destination, date/time, security level.
+  // Then call apiCall('requestTransport', { ... })
+}
+
+function serveWarrant() {
+  alert(`📜 Serve Federal Warrant (coming soon)\n\nLog the service of a federal arrest warrant.`);
+  // TODO: Open a modal with: warrant number, defendant name, date served, status (served / not found / etc.)
+  // Then call apiCall('serveWarrant', { ... })
+}
+
+function reportManhunt() {
+  alert(`🔍 Manhunt Status Report (coming soon)\n\nReport the status of an active manhunt for an escaped felon.`);
+  // TODO: Open a modal with: suspect name, last known location, status (active / suspended / concluded).
+  // Then call apiCall('reportManhunt', { ... })
+}
+
+function submitSecurityReport() {
+  alert(`📋 Court Security Log (coming soon)\n\nSubmit a security report for a court session.`);
+  // TODO: Open a modal with: date, judge name, case number, security incidents (none / warnings / arrests).
+  // Then call apiCall('submitSecurityReport', { ... })
+}
   
   // Role-specific buttons
   if (role === 'judge') {
@@ -449,7 +500,7 @@ function attachDashboardEventListeners(role) {
   } else if (role === 'reporter') {
     document.getElementById('uploadTranscriptBtn')?.addEventListener('click', () => alert('Upload transcript URL (coming soon)'));
   } else if (role === 'admin') {
-    document.getElementById('userMgmtBtn')?.addEventListener('click', () => window.open('https://docs.google.com/spreadsheets/d/1eTO1TwZYHm-mAoIcynh2rJp2XrqqYMkHTLy0zyJI214/edit?gid=0', '_blank'));
+    document.getElementById('userMgmtBtn')?.addEventListener('click', () => window.open(usersSheetUrl, '_blank'));
     document.getElementById('assignJudgeBtn')?.addEventListener('click', () => alert('Auto-assign judges (coming soon)'));
     document.getElementById('recusalQueueBtn')?.addEventListener('click', () => {
       if (typeof showRecusalQueue === 'function') {
@@ -459,9 +510,15 @@ function attachDashboardEventListeners(role) {
       }
     });
     document.getElementById('financialAuditBtn')?.addEventListener('click', () => alert('Financial summary (coming soon)'));
-    document.getElementById('offlineDuesBtn')?.addEventListener('click', () => window.open('https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1869397302', '_blank'));
+    document.getElementById('offlineDuesBtn')?.addEventListener('click', () => window.open(offlineDuesSheetUrl, '_blank'));
     
-    // ✅ AUDIT PLACEHOLDER BUTTONS - Admin
+} else if (role === 'marshal') {
+  document.getElementById('transportRequestBtn')?.addEventListener('click', () => requestTransport());
+  document.getElementById('warrantServiceBtn')?.addEventListener('click', () => serveWarrant());
+  document.getElementById('manhuntReportBtn')?.addEventListener('click', () => reportManhunt());
+  document.getElementById('securityLogBtn')?.addEventListener('click', () => submitSecurityReport());
+   
+ // ✅ AUDIT PLACEHOLDER BUTTONS - Admin
     document.getElementById('cleanupFilesBtn')?.addEventListener('click', () => {
       alert('🧹 Clean-up Files feature coming soon!\n\nThis will help audit and organize case files in Google Drive.');
     });
@@ -477,8 +534,8 @@ function attachDashboardEventListeners(role) {
       }
     });
     document.getElementById('cjAssignJudgeBtn')?.addEventListener('click', () => alert('Manual judge assignment (coming soon)'));
-    document.getElementById('cjViewAuditBtn')?.addEventListener('click', () => window.open('https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=394849338', '_blank'));
-    document.getElementById('cjUserMgmtBtn')?.addEventListener('click', () => window.open('https://docs.google.com/spreadsheets/d/1eTO1TwZYHm-mAoIcynh2rJp2XrqqYMkHTLy0zyJI214/edit?gid=0', '_blank'));
+    document.getElementById('cjViewAuditBtn')?.addEventListener('click', () => window.open(allFilingsSheetUrl, '_blank'));
+    document.getElementById('cjUserMgmtBtn')?.addEventListener('click', () => window.open(usersSheetUrl, '_blank'));
     
     // ✅ AUDIT PLACEHOLDER BUTTONS - Chief Justice
     document.getElementById('cleanupFilesBtn')?.addEventListener('click', () => {
@@ -540,20 +597,20 @@ function attachDashboardEventListeners(role) {
 }
 
 /**
- * Render SSRP scheduling section (work calendar)
+ * Render scheduling section (work calendar)
  */
 function renderScheduling() {
-  // Generate next 14 days - SSRP uses Central Time
+  // Generate next 14 days
   const today = new Date();
   const days = [];
   for (let i = 0; i < 14; i++) {
     const date = new Date(today);
     date.setDate(today.getDate() + i);
-    const dateStr = date.toLocaleDateString('en-US', { timeZone: CONFIG.timeZone }); // "M/d/yyyy" format
+    const dateStr = date.toLocaleDateString('en-US'); // "M/d/yyyy" format
     days.push({
       date: date,
       dateStr: dateStr,
-      dayName: date.toLocaleDateString('en-US', { weekday: 'short', timeZone: CONFIG.timeZone }),
+      dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
       availability: userAvailability[currentUser?.name]?.[dateStr] || '—'
     });
   }
@@ -592,16 +649,15 @@ function getAvailabilityColor(availability) {
 }
 
 /**
- * Render SSRP DA Dashboard (called from renderDashboardByRole)
+ * Render DA Dashboard (called from renderDashboardByRole)
  */
 async function renderDADashboard() {
   let pendingReports = [];
   try {
-    // ✅ SSRP: Use adminCall for Admin Ops endpoint
-    const reportsData = await adminCall('getPendingReports');
+    const reportsData = await apiCall('getPendingReports');
     pendingReports = reportsData.reports || [];
   } catch (err) {
-    console.error('SSRP failed to load pending reports:', err);
+    console.error('Failed to load pending reports:', err);
   }
   
   return `
@@ -614,7 +670,7 @@ async function renderDADashboard() {
           <div class="border border-gray-700 rounded p-3 flex justify-between items-center">
             <div>
               <strong>${r.type.toUpperCase()}</strong> - ${r.defendant}<br>
-              <span class="text-sm text-gray-400">Submitted: ${new Date(r.timestamp).toLocaleDateString('en-US', { timeZone: CONFIG.timeZone })}</span>
+              <span class="text-sm text-gray-400">Submitted: ${new Date(r.timestamp).toLocaleDateString()}</span>
             </div>
             <div class="flex gap-2">
               <button onclick="approveReport(${r.id})" class="btn-primary text-sm py-1 px-3 rounded-lg">Approve</button>
@@ -637,7 +693,7 @@ async function renderDADashboard() {
 }
 
 /**
- * Attach SSRP DA event listeners (called from attachDashboardEventListeners)
+ * Attach DA event listeners (called from attachDashboardEventListeners)
  */
 function attachDAEventListeners() {
   document.getElementById('daFileChargesBtn')?.addEventListener('click', () => alert('File charges form (coming soon)'));
@@ -646,8 +702,7 @@ function attachDAEventListeners() {
   // Approve/Deny report buttons (inline onclick handlers)
   window.approveReport = async (id) => {
     try {
-      // ✅ SSRP: Use adminCall for Admin Ops endpoint
-      await adminCall('approveReport', { id, approved_by: currentUser.name });
+      await apiCall('approveReport', { id, approved_by: currentUser.name });
       alert('✅ Report approved!');
       renderDashboardByRole(); // Refresh dashboard
     } catch (err) {
@@ -657,8 +712,7 @@ function attachDAEventListeners() {
   
   window.denyReport = async (id) => {
     try {
-      // ✅ SSRP: Use adminCall for Admin Ops endpoint
-      await adminCall('denyReport', { id });
+      await apiCall('denyReport', { id });
       alert('✅ Report denied!');
       renderDashboardByRole(); // Refresh dashboard
     } catch (err) {
@@ -668,35 +722,35 @@ function attachDAEventListeners() {
 }
 
 /**
- * Show SSRP recusal queue modal (for admin/CJ)
+ * Show recusal queue modal (for admin/CJ)
  */
 function showRecusalQueue() {
   alert('⚖️ Recusal Queue (coming soon)\n\nThis will show pending recusal requests for Chief Justice review.');
 }
 
 /**
- * Show SSRP recusal request form (for judges/attorneys)
+ * Show recusal request form (for judges/attorneys)
  */
 function submitRecusal() {
   alert('⚖️ Recusal Request Form (coming soon)\n\nSubmit a request to be recused from a case.');
 }
 
 /**
- * Show SSRP PD report form
+ * Show PD report form
  */
 function showPDReportForm() {
   alert('📋 Criminal Report Form (coming soon)\n\nSubmit a criminal report to the District Attorney.');
 }
 
 /**
- * Show SSRP police report form
+ * Show police report form
  */
 function showPoliceReportForm() {
   alert('🚨 Criminal Report Form (coming soon)\n\nFile a criminal report for DA review.');
 }
 
 /**
- * Show SSRP training modal
+ * Show training modal
  */
 function showTrainingModal(role) {
   alert(`📚 Training Materials for ${role}\n\nTraining content coming soon!`);
@@ -715,4 +769,8 @@ window.showRecusalQueue = showRecusalQueue;
 window.submitRecusal = submitRecusal;
 window.showPDReportForm = showPDReportForm;
 window.showPoliceReportForm = showPoliceReportForm;
+window.requestTransport = requestTransport;
+window.serveWarrant = serveWarrant;
+window.reportManhunt = reportManhunt;
+window.submitSecurityReport = submitSecurityReport;
 window.showTrainingModal = showTrainingModal;

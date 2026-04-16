@@ -1,5 +1,5 @@
 // ============================================
-// AUTHENTICATION - SSRP (REAL API, NO MOCK DATA)
+// AUTHENTICATION - REAL API, NO MOCK DATA
 // ============================================
 
 /**
@@ -14,14 +14,13 @@ async function handleLogin(passcode) {
     // 🔥 Show loading overlay WHILE logging in 🔥
     showLoginOverlay();
     
-    // 🔥 REAL API CALL - verifies against SSRP Admin Ops 'users' sheet 🔥
+    // 🔥 REAL API CALL - verifies against users sheet 🔥
     const result = await apiCall('verifyLogin', { passcode });
     
     if (result.success && result.user) {
       // Set current user
       currentUser = result.user;
-      // ✅ SSRP: Use CONFIG.storagePrefix for session keys
-      sessionStorage.setItem(CONFIG.storagePrefix + 'user', JSON.stringify(currentUser));
+      sessionStorage.setItem('doj_user', JSON.stringify(currentUser));
       
       // Update UI
       document.getElementById('loginNavBtn').classList.add('hidden');
@@ -42,16 +41,16 @@ async function handleLogin(passcode) {
       // Hide overlay on error
       hideLoginOverlay();
       
-      // Show error - SSRP branded message
-      loginError.innerText = result.error || 'Invalid passcode. Please check with your Master Clerk.';
+      // Show error
+      loginError.innerText = result.error || 'Invalid passcode';
       loginError.classList.remove('hidden');
     }
   } catch (err) {
     // Hide overlay on error
     hideLoginOverlay();
     
-    console.error('SSRP Login error:', err);
-    loginError.innerText = 'Connection error. Please try again or open a DOJ Ticket.';
+    console.error('Login error:', err);
+    loginError.innerText = 'Connection error. Please try again.';
     loginError.classList.remove('hidden');
   }
 }
@@ -60,9 +59,9 @@ async function handleLogin(passcode) {
  * Handle user logout
  */
 function handleLogout() {
-  // Clear session - SSRP prefix
+  // Clear session
   currentUser = null;
-  sessionStorage.removeItem(CONFIG.storagePrefix + 'user');
+  sessionStorage.removeItem('doj_user');
   
   // Clear global state
   userAvailability = {};
@@ -102,7 +101,7 @@ function hideLoginOverlay() {
 }
 
 /**
- * Initialize auth event listeners - SSRP
+ * Initialize auth event listeners
  */
 function initAuth() {
   // Login button in header - opens login modal (NO overlay)
@@ -141,16 +140,16 @@ function initAuth() {
     logoutBtn.addEventListener('click', handleLogout);
   }
   
-  // Forgot password button - SSRP specific instructions
+  // Forgot password button
   const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
   if (forgotPasswordBtn) {
     forgotPasswordBtn.addEventListener('click', () => {
-      alert('SSRP DOJ: Password reset requests are handled via Discord ticket. Please open a DOJ Assistance ticket in #doj-assistance.');
+      alert('Password reset requests are handled via Discord ticket. Please open a DOJ Assistance ticket.');
     });
   }
   
-  // Check for saved SSRP session
-  const saved = sessionStorage.getItem(CONFIG.storagePrefix + 'user');
+  // Check for saved session
+  const saved = sessionStorage.getItem('doj_user');
   if (saved) {
     try {
       currentUser = JSON.parse(saved);
@@ -159,8 +158,8 @@ function initAuth() {
       // User is already logged in, show dashboard
       showDashboard();
     } catch (e) {
-      console.error('Failed to restore SSRP session:', e);
-      sessionStorage.removeItem(CONFIG.storagePrefix + 'user');
+      console.error('Failed to restore session:', e);
+      sessionStorage.removeItem('doj_user');
       // Show home page (public access)
       showHome();
     }

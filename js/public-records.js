@@ -1,9 +1,9 @@
 // ============================================
-// PUBLIC RECORDS PAGE - SSRP (GLOBAL FUNCTIONS)
+// PUBLIC RECORDS PAGE - GLOBAL FUNCTIONS
 // ============================================
 
 /**
- * Render a data table for SSRP public records
+ * Render a data table
  * @param {string} tableId - Table element ID
  * @param {Array} records - Array of record objects
  * @param {Array} headers - Column headers
@@ -18,7 +18,7 @@ function renderTable(tableId, records, headers, fieldMap, statusField = null) {
   if (!tbody) return;
   
   if (!records || records.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="${headers.length}" class="text-center text-gray-500 py-4">No SSRP records found</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${headers.length}" class="text-center text-gray-500 py-4">No records found</td></tr>`;
     return;
   }
   
@@ -45,7 +45,7 @@ function renderTable(tableId, records, headers, fieldMap, statusField = null) {
 }
 
 /**
- * Filter SSRP table records by search term
+ * Filter table records by search term
  * @param {Array} records - Records to filter
  * @param {Array} headers - Headers to search
  * @param {object} fieldMap - Field mapping
@@ -60,7 +60,7 @@ function filterTable(records, headers, fieldMap, searchTerm) {
 }
 
 /**
- * Render SSRP Public Records page
+ * Render Public Records page
  */
 async function renderPublicRecords() {
   const recordsDiv = document.getElementById('publicRecordsSection');
@@ -69,13 +69,13 @@ async function renderPublicRecords() {
   recordsDiv.innerHTML = `
     <div class="card p-6">
       <div class="flex gap-4 border-b border-gray-700 mb-4 flex-wrap">
-        <button class="tab-btn active" data-tab="marriage">SSRP Marriage Registry</button>
-        <button class="tab-btn" data-tab="property">SSRP Property Registry</button>
-        <button class="tab-btn" data-tab="professional">SSRP Professional Registry</button>
-        <button class="tab-btn" data-tab="cases">SSRP Case Docket</button>
+        <button class="tab-btn active" data-tab="marriage">Marriage Registry</button>
+        <button class="tab-btn" data-tab="property">Property Registry</button>
+        <button class="tab-btn" data-tab="professional">Professional Registry</button>
+        <button class="tab-btn" data-tab="cases">Case Docket</button>
       </div>
       <div class="mb-4">
-        <input type="text" id="searchInput" placeholder="Search SSRP records..." class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="text" id="searchInput" placeholder="Search..." class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
       </div>
       
       <!-- Marriage Registry -->
@@ -158,7 +158,7 @@ async function renderPublicRecords() {
     </div>
   `;
   
-  // Fetch all SSRP data from your deployed database spreadsheet
+  // Fetch all data
   const [marriages, properties, professionals, cases] = await Promise.all([
     fetchSheetData('MarriageRegistry'),
     fetchSheetData('PropertyRegistry'),
@@ -166,7 +166,7 @@ async function renderPublicRecords() {
     fetchSheetData('CaseRegistry')
   ]);
   
-  // Map SSRP Marriage Registry
+  // Map Marriage Registry
   const mappedMarriages = marriages.map(r => ({
     cert: r['Certificate #'] || '',
     spouse1: r['Spouse 1'] || '',
@@ -176,7 +176,7 @@ async function renderPublicRecords() {
     status: r['Status'] || ''
   }));
   
-  // Map SSRP Property Registry
+  // Map Property Registry
   const mappedProperties = properties.map(r => ({
     deed: r['Deed/Transfer #'] || r['Deed #'] || '',
     type: r['Property Type'] || r['Type'] || '',
@@ -185,7 +185,7 @@ async function renderPublicRecords() {
     date: r['Transfer Date'] || r['Date'] || ''
   }));
   
-  // Map SSRP Professional Registry
+  // Map Professional Registry
   const mappedProfessionals = professionals.map(r => ({
     entity: r['Entity Name'] || r['Entity'] || '',
     type: r['TYPE'] || r['Type'] || '',
@@ -196,7 +196,7 @@ async function renderPublicRecords() {
     status: r['Status'] || ''
   }));
   
-  // Map SSRP Case Docket
+  // Map Case Docket
   const mappedCases = cases.map(r => {
     let judgeDisplay = r['Judge'] || r['Assigned Judge'] || 'Pending';
     if (judgeDisplay === '[Enter Assigned Judge]' || !judgeDisplay || judgeDisplay.trim() === '') {
@@ -222,7 +222,7 @@ async function renderPublicRecords() {
     professionals: mappedProfessionals
   };
   
-  // Render initial SSRP tables
+  // Render initial tables
   renderTable('marriageTable', mappedMarriages,
     ['Certificate #', 'Spouse 1', 'Spouse 2', 'Date', 'Officiant', 'Status'],
     { 'Certificate #': 'cert', 'Spouse 1': 'spouse1', 'Spouse 2': 'spouse2', 'Date': 'date', 'Officiant': 'officiant', 'Status': 'status' },
@@ -245,7 +245,7 @@ async function renderPublicRecords() {
     { 'Case #': 'caseNo', 'Type': 'type', 'Plaintiff': 'plaintiff', 'Defendant': 'defendant', 'Judge': 'judge', 'Court Level': 'courtLevel', 'Filed Date': 'filedDate', 'Status': 'status' }
   );
   
-  // SSRP search functionality
+  // Search functionality
   const searchInput = document.getElementById('searchInput');
   const debouncedSearch = debounce((term) => {
     const activeTab = document.querySelector('.tab-content.active')?.id;
@@ -299,7 +299,7 @@ async function renderPublicRecords() {
     debouncedSearch(e.target.value.toLowerCase());
   });
   
-  // SSRP tab switching
+  // Tab switching
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const tab = btn.dataset.tab;
@@ -316,7 +316,7 @@ async function renderPublicRecords() {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       
-      // Trigger search to refresh current SSRP table
+      // Trigger search to refresh current table
       searchInput?.dispatchEvent(new Event('input'));
     });
   });

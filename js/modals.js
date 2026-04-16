@@ -1,5 +1,5 @@
 // ============================================
-// MODAL HELPERS - SSRP (GLOBAL FUNCTIONS)
+// MODAL HELPERS - GLOBAL FUNCTIONS
 // ============================================
 
 /**
@@ -35,14 +35,14 @@ function showModal(contentHtml) {
 }
 
 /**
- * Show SSRP Quick Guide modal
+ * Show Quick Guide modal
  */
 function showQuickGuide() {
   document.getElementById('quickGuideModal')?.classList.remove('hidden');
 }
 
 /**
- * Show SSRP Training modal for a specific role
+ * Show Training modal for a specific role
  * @param {string} role - User's role
  */
 function showTrainingModal(role) {
@@ -60,10 +60,10 @@ function showTrainingModal(role) {
       <iframe class="w-full h-64" src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=0&loop=0" frameborder="0" allowfullscreen></iframe>
     </div>
     <div class="prose max-w-none text-gray-300">
-      <p>This is the SSRP training guide for ${roleName}. It covers essential duties, procedures, and best practices for the Silent Struggle RP Department of Justice.</p>
+      <p>This is the training guide for ${roleName}. It covers essential duties, procedures, and best practices.</p>
       <ul class="list-disc pl-5 mt-2">
         <li>Role-specific responsibility overview</li>
-        <li>How to use the SSRP DOJ Portal for this role</li>
+        <li>How to use the DOJ Portal for this role</li>
         <li>Common workflows and tasks</li>
         <li>Where to find additional help</li>
       </ul>
@@ -74,7 +74,7 @@ function showTrainingModal(role) {
 }
 
 /**
- * Initialize SSRP modal event listeners
+ * Initialize modal event listeners
  */
 function initModals() {
   // Quick Guide button (on home page)

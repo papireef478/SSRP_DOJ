@@ -1,9 +1,9 @@
 // ============================================
-// UTILITY FUNCTIONS - SSRP (GLOBAL)
+// UTILITY FUNCTIONS - GLOBAL
 // ============================================
 
 /**
- * Format date string to MM/DD/YYYY for SSRP records
+ * Format date string to MM/DD/YYYY
  * @param {string} dateStr - Date string in any format
  * @returns {string} Formatted date or 'N/A'
  */
@@ -23,7 +23,7 @@ function formatDate(dateStr) {
 }
 
 /**
- * Get CSS class for SSRP status-based coloring
+ * Get CSS class for status-based coloring
  * @param {string} status - Status value
  * @returns {string} CSS class name or empty string
  */
@@ -41,7 +41,7 @@ function getStatusClass(status) {
 }
 
 /**
- * Debounce function for SSRP search inputs
+ * Debounce function for search inputs
  * @param {Function} func - Function to debounce
  * @param {number} wait - Wait time in ms
  * @returns {Function} Debounced function
@@ -59,7 +59,7 @@ function debounce(func, wait = 300) {
 }
 
 /**
- * Escape HTML to prevent XSS in SSRP content
+ * Escape HTML to prevent XSS
  * @param {string} str - String to escape
  * @returns {string} Escaped string
  */

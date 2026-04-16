@@ -1,16 +1,16 @@
 // ============================================
-// API CALL HELPERS - SSRP (Google Apps Script Backend)
+// API CALL HELPERS - GLOBAL FUNCTIONS
 // ============================================
 
 /**
- * Make an API call to the SSRP Google Apps Script backend
- * @param {string} action - The action to perform (e.g., 'verifyLogin', 'sendMessage')
+ * Make an API call to the Google Apps Script backend
+ * @param {string} action - The action to perform (e.g., 'sendMessage')
  * @param {object} params - Parameters to send
- * @param {string} endpoint - Optional endpoint URL (defaults to API_URLS.adminOps from config.js)
+ * @param {string} baseUrl - Optional custom base URL (defaults to API_URL from config.js)
  * @returns {Promise<object>} API response data
  */
-async function apiCall(action, params = {}, endpoint = API_URLS.adminOps) {
-  const url = new URL(endpoint);
+async function apiCall(action, params = {}, baseUrl = API_URL) {
+  const url = new URL(baseUrl);
   url.searchParams.append('action', action);
   
   // ✅ Loop through each parameter and add to URL
@@ -35,7 +35,7 @@ async function apiCall(action, params = {}, endpoint = API_URLS.adminOps) {
   
   // ✅ Throw error if backend returned success: false
   if (!data.success) {
-    throw new Error(data.error || 'SSRP API call failed');
+    throw new Error(data.error || 'API call failed');
   }
   
   return data;
@@ -47,38 +47,11 @@ async function apiCall(action, params = {}, endpoint = API_URLS.adminOps) {
  * @param {string} errorMessage - Error message to show
  * @returns {Promise<any>}
  */
-async function withErrorHandling(fn, errorMessage = 'An SSRP error occurred') {
+async function withErrorHandling(fn, errorMessage = 'An error occurred') {
   try {
     return await fn();
   } catch (err) {
     console.error(`${errorMessage}:`, err);
     throw err;
   }
-}
-
-/**
- * Helper: Call the Database endpoint (cases, marriages, property, professionals)
- * @param {string} action - Action to perform
- * @param {object} params - Parameters
- */
-async function dbCall(action, params = {}) {
-  return apiCall(action, params, API_URLS.database);
-}
-
-/**
- * Helper: Call the Admin Ops endpoint (auth, messaging, reports, penal code, tasks)
- * @param {string} action - Action to perform
- * @param {object} params - Parameters
- */
-async function adminCall(action, params = {}) {
-  return apiCall(action, params, API_URLS.adminOps);
-}
-
-/**
- * Helper: Call the Bar Exam endpoint (exam codes, results, clerk verification)
- * @param {string} action - Action to perform
- * @param {object} params - Parameters
- */
-async function barCall(action, params = {}) {
-  return apiCall(action, params, API_URLS.barExam);
 }

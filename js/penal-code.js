@@ -1,9 +1,9 @@
 // ============================================
-// PENAL CODE PAGE - GLOBAL FUNCTIONS (SSRP)
+// PENAL CODE PAGE - GLOBAL FUNCTIONS
 // ============================================
 
 /**
- * Render Penal Code accordion with Texas PC references
+ * Render Penal Code accordion
  * @param {object} grouped - Grouped penal codes by title
  */
 function renderPenalCodeAccordion(grouped) {
@@ -27,7 +27,8 @@ function renderPenalCodeAccordion(grouped) {
                 <th>Level</th>
                 <th>Jail (mo)</th>
                 <th>Fine</th>
-                <th>Texas PC Ref</th>
+                <th>TxRef</th>
+                <th>SSRPRef</th>
               </tr>
             </thead>
             <tbody>
@@ -39,7 +40,8 @@ function renderPenalCodeAccordion(grouped) {
                   <td>${r.Level || ''}</td>
                   <td>${r.Jail || ''}</td>
                   <td>${r.Fine ? '$' + Number(r.Fine).toLocaleString() : ''}</td>
-                  <td>${r.txRef || '—'}</td>
+                  <td>${r.TxRef || ''}</td>
+                  <td>${r.SSRPRef || ''}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -76,20 +78,6 @@ function renderPenalCodeAccordion(grouped) {
 }
 
 /**
- * Fetch penal code data from SSRP Admin Ops API
- */
-async function fetchPenalCodeData() {
-  try {
-    // ✅ SSRP: Use adminCall for Admin Ops endpoint
-    const result = await adminCall('getPenalCode');
-    return result.success ? result.codes : [];
-  } catch (err) {
-    console.error('Failed to fetch penal code:', err);
-    return [];
-  }
-}
-
-/**
  * Render Penal Code page
  */
 async function renderPenalCode() {
@@ -98,10 +86,10 @@ async function renderPenalCode() {
   
   penalDiv.innerHTML = `
     <div class="card p-6">
-      <h2 class="text-2xl font-bold text-white mb-4">Texas‑Inspired Penal Code</h2>
-      <p class="text-gray-300 mb-4">The complete Penal Code is available in the SSRP DOJ Manual. Texas Penal Code references are shown for immersion.</p>
+      <h2 class="text-2xl font-bold text-white mb-4">Texas Penal Code</h2>
+      <p class="text-gray-300 mb-4">The complete Penal Code is available in the DOJ Manual.</p>
       <div class="flex gap-4 mb-6">
-        <a href="https://docs.google.com/document/d/1d8A8j_Yl-hikWGq3_rYCCcvVir5sEfvY73NuRt7XEM0/export?format=pdf" target="_blank" class="btn-primary py-2 px-4 rounded-lg">Download Manual (PDF)</a>
+        <a href="https://docs.google.com/document/d/1s5Y4PqGibZOogH8MKxJc5J7yv35fjSRGVNCAhulKMmI/export?format=pdf" target="_blank" class="btn-primary py-2 px-4 rounded-lg">Download Manual (PDF)</a>
         <button id="openManualBtn" class="btn-secondary py-2 px-4 rounded-lg">Open Full Manual</button>
       </div>
       <div class="space-y-2 penal-code-table" id="penalCodeAccordion">
@@ -111,7 +99,7 @@ async function renderPenalCode() {
   `;
   
   document.getElementById('openManualBtn')?.addEventListener('click', () => {
-    window.open('https://docs.google.com/document/d/1d8A8j_Yl-hikWGq3_rYCCcvVir5sEfvY73NuRt7XEM0/edit?usp=sharing', '_blank');
+    window.open('https://docs.google.com/document/d/1s5Y4PqGibZOogH8MKxJc5J7yv35fjSRGVNCAhulKMmI/edit?usp=sharing', '_blank');
   });
   
   try {
@@ -130,8 +118,9 @@ async function renderPenalCode() {
           Description: c['Description'] || '',
           Level: c['Level'] || '',
           Jail: c['Jail (month)'] || c['Jail'] || '',
-          Fine: c['Fine ($)'] || c['Fine'] || c['Fine $'] || '',
-          txRef: c['txRef'] || ''  // ✅ Texas PC reference column
+          Fine: c['Fine ($)'] || c['Fine'] || c['Fine $'] || ''
+          TxRef: c['TxRef'] || '',
+          SSRPRef: c['SSRPRef'] || '',
         });
       });
       
