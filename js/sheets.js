@@ -42,7 +42,7 @@ async function fetchSheetData(sheetName, spreadsheetId = DOJ_DB_SPREADSHEET_ID) 
  * Fetch Penal Code data directly from Sheets (no API middleware)
  * @returns {Promise<Array>} Array of penal code entries
  */
-async function fetchPenalCodeData(spreadsheetId = PENAL_CODE_SPREADSHEET_ID) {
+async function fetchPenalCodeData(spreadsheetId = ADMIN_OPS_SPREADSHEET_ID) {
     try {
         // PenalCode sheet has headers in ROW 1, data starts ROW 2
         const headerUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/PenalCode!A1:ZZ1?key=${SHEETS_API_KEY}`;
