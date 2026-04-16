@@ -417,36 +417,7 @@ function attachDashboardEventListeners(role) {
       }
     });
   });
-
-/**
- * U.S. Marshal Functions
- * Replace the alerts with actual API calls or modal forms.
- */
-
-function requestTransport() {
-  alert(`🚔 Prisoner Transport Request (coming soon)\n\nSubmit a request to transport a prisoner from Bolingbroke Penitentiary to court.`);
-  // TODO: Open a modal with fields: prisoner name, case number, destination, date/time, security level.
-  // Then call apiCall('requestTransport', { ... })
-}
-
-function serveWarrant() {
-  alert(`📜 Serve Federal Warrant (coming soon)\n\nLog the service of a federal arrest warrant.`);
-  // TODO: Open a modal with: warrant number, defendant name, date served, status (served / not found / etc.)
-  // Then call apiCall('serveWarrant', { ... })
-}
-
-function reportManhunt() {
-  alert(`🔍 Manhunt Status Report (coming soon)\n\nReport the status of an active manhunt for an escaped felon.`);
-  // TODO: Open a modal with: suspect name, last known location, status (active / suspended / concluded).
-  // Then call apiCall('reportManhunt', { ... })
-}
-
-function submitSecurityReport() {
-  alert(`📋 Court Security Log (coming soon)\n\nSubmit a security report for a court session.`);
-  // TODO: Open a modal with: date, judge name, case number, security incidents (none / warnings / arrests).
-  // Then call apiCall('submitSecurityReport', { ... })
-}
-  
+ 
   // Role-specific buttons
   if (role === 'judge') {
     document.getElementById('recusalBtn')?.addEventListener('click', () => {
@@ -690,6 +661,34 @@ async function renderDADashboard() {
       </div>
     </div>
   `;
+}
+/**
+ * U.S. Marshal Functions
+ * Replace the alerts with actual API calls or modal forms.
+ */
+
+function requestTransport() {
+  alert(`🚔 Prisoner Transport Request (coming soon)\n\nSubmit a request to transport a prisoner from Bolingbroke Penitentiary to court.`);
+  // TODO: Open a modal with fields: prisoner name, case number, destination, date/time, security level.
+  // Then call apiCall('requestTransport', { ... })
+}
+
+function serveWarrant() {
+  alert(`📜 Serve Federal Warrant (coming soon)\n\nLog the service of a federal arrest warrant.`);
+  // TODO: Open a modal with: warrant number, defendant name, date served, status (served / not found / etc.)
+  // Then call apiCall('serveWarrant', { ... })
+}
+
+function reportManhunt() {
+  alert(`🔍 Manhunt Status Report (coming soon)\n\nReport the status of an active manhunt for an escaped felon.`);
+  // TODO: Open a modal with: suspect name, last known location, status (active / suspended / concluded).
+  // Then call apiCall('reportManhunt', { ... })
+}
+
+function submitSecurityReport() {
+  alert(`📋 Court Security Log (coming soon)\n\nSubmit a security report for a court session.`);
+  // TODO: Open a modal with: date, judge name, case number, security incidents (none / warnings / arrests).
+  // Then call apiCall('submitSecurityReport', { ... })
 }
 
 /**
