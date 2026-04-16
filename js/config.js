@@ -15,7 +15,7 @@ const PENAL_CODE_API_URL = "https://script.google.com/macros/s/AKfycbwE_uHNWLGQe
 const BAR_EXAM_API_URL = "https://script.google.com/macros/s/AKfycbyLqIR_dNlKTZsJZy1F6GnfwXewE3Flp9LAL78g5kVWs53PaOmQhiAsQXB7ToOOSLMfoQ/exec";
 
 // 🔑 Google Sheets API Key
-const SHEETS_API_KEY = "https://script.google.com/macros/s/AKfycbz9qrRPkvAix02KdfH6e2oGjzlgOC7wk3iEBALCWSbYFPyf2L1E4NPtZp4t2AZMWq0llw/exec";
+const SHEETS_API_KEY = "1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc";
 
 // 📊 Spreadsheet IDs
 const DOJ_DB_SPREADSHEET_ID = "1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc";
