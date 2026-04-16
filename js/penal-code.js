@@ -118,7 +118,7 @@ async function renderPenalCode() {
           Description: c['Description'] || '',
           Level: c['Level'] || '',
           Jail: c['Jail (month)'] || c['Jail'] || '',
-          Fine: c['Fine ($)'] || c['Fine'] || c['Fine $'] || ''
+          Fine: c['Fine ($)'] || c['Fine'] || c['Fine $'] || '',
           TxRef: c['TxRef'] || '',
           SSRPRef: c['SSRPRef'] || '',
         });
