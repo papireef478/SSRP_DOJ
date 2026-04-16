@@ -26,8 +26,8 @@ const discordTicketUrl = "https://discordapp.com/channels/1462229061152538790/14
 const DISCORD_SERVER_INVITE = "https://discord.gg/QPPnmjY7p6";
 
 // Derived Sheet URLs (based on new spreadsheet IDs)
-const offlineDuesSheetUrl = `https://docs.google.com/spreadsheets/d/${DOJ_DB_SPREADSHEET_ID}/edit?gid=1869397302#gid=1869397302`;
-const allFilingsSheetUrl = `https://docs.google.com/spreadsheets/d/${DOJ_DB_SPREADSHEET_ID}/edit?gid=394849338#gid=394849338`;
+const offlineDuesSheetUrl = `https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1869397302#gid=1869397302`;
+const allFilingsSheetUrl = `https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=295389032#gid=295389032`;
 const usersSheetUrl = `https://docs.google.com/spreadsheets/d/${PENAL_CODE_SPREADSHEET_ID}/edit?gid=0#gid=0`;
 
 // Discord Channel References (per SSRP Manual Section 84)
