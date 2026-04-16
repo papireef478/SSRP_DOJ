@@ -42,28 +42,39 @@ async function fetchSheetData(sheetName, spreadsheetId = DOJ_DB_SPREADSHEET_ID) 
  * Fetch Penal Code data directly from Sheets (no API middleware)
  * @returns {Promise<Array>} Array of penal code entries
  */
-async function fetchPenalCodeData() {
-  try {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${PENAL_CODE_SPREADSHEET_ID}/values/PenalCode?key=${SHEETS_API_KEY}`;
-    
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`Sheets API error: ${response.status}`);
-    
-    const data = await response.json();
-    if (!data.values || data.values.length < 2) {
-      throw new Error('No penal code data found');
+async function fetchPenalCodeData(spreadsheetId = PENAL_CODE_SPREADSHEET_ID) {
+    try {
+        // PenalCode sheet has headers in ROW 1, data starts ROW 2
+        const headerUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/PenalCode!A1:ZZ1?key=${SHEETS_API_KEY}`;
+        const dataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/PenalCode!A2:ZZ?key=${SHEETS_API_KEY}`;
+        
+        const [headerRes, dataRes] = await Promise.all([
+            fetch(headerUrl),
+            fetch(dataUrl)
+        ]);
+        
+        if (!headerRes.ok || !dataRes.ok) {
+            throw new Error(`Sheets API error: ${headerRes.status || dataRes.status}`);
+        }
+        
+        const [headersData, dataData] = await Promise.all([
+            headerRes.json(),
+            dataRes.json()
+        ]);
+        
+        const headers = headersData.values?.[0] || [];
+        const rows = dataData.values || [];
+        
+        return rows.map(row => {
+            const obj = {};
+            headers.forEach((header, i) => {
+                obj[header] = row[i] || '';
+            });
+            return obj;
+        });
+    } catch(err) {
+        console.error('Failed to fetch penal code:', err);
+        // Return empty array instead of crashing
+        return [];
     }
-    
-    const rows = data.values;
-    const headers = rows[0];
-    
-    return rows.slice(1).map(row => {
-      const code = {};
-      headers.forEach((h, idx) => { code[h] = row[idx] || ''; });
-      return code;
-    });
-  } catch (err) {
-    console.error('Failed to fetch penal code:', err);
-    throw err;
-  }
 }
