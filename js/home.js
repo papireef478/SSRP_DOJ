@@ -90,7 +90,7 @@ function renderHome() {
     <div class="card p-6 mb-12">
       <div class="flex flex-col md:flex-row gap-6">
         <div class="md:w-1/4 flex justify-center items-center">
-          <div class="w-40 h-40 bg-yellow-100 rounded-full flex items-center justify-center text-6xl font-bold text-[#e94560] shadow-lg">⚖️</div>
+          <img src="assets/doj-logo.png" alt="DOJ Logo" class="w-40 h-40 rounded-full object-cover shadow-lg">
         </div>
         <div class="md:w-3/4">
           <div class="mb-6">
