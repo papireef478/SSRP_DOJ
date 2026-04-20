@@ -199,17 +199,16 @@ function showCommunicationModal(targetRole, targetLabel) {
   setupSendMessageHandler(targetRole, targetLabel, false);
 }
 
-/**
- * Setup send button handler (shared logic for reply and normal modes)
- */
+// ============================================================================
+// 🔹 SETUP SEND BUTTON HANDLER — REPLACEMENT CODE
+// ============================================================================
 function setupSendMessageHandler(targetRole, targetLabel, isReplyMode) {
   document.getElementById('sendMessageBtn')?.addEventListener('click', async () => {
     const sendBtn = document.getElementById('sendMessageBtn');
     const originalBtnText = sendBtn.innerHTML;
     
-    // Disable button and show loading state
     sendBtn.disabled = true;
-    sendBtn.innerHTML = '<span class="animate-spin mr-2">⏳</span>Sending...';
+    sendBtn.innerHTML = '⏳Sending...';
     
     try {
       const recipientSelect = document.getElementById('recipientSelect');
@@ -234,7 +233,6 @@ function setupSendMessageHandler(targetRole, targetLabel, isReplyMode) {
       // Determine recipients array
       let recipientsArray;
       if (isReplyMode) {
-        // ✅ Reply mode: Send only to the locked recipient
         recipientsArray = [recipient];
       } else if (recipient === 'all') {
         recipientsArray = [targetRole].filter(r => r && r.trim() !== '');
@@ -245,55 +243,55 @@ function setupSendMessageHandler(targetRole, targetLabel, isReplyMode) {
       // ✅ Get thread_id if replying
       const threadId = document.getElementById('replyThreadId')?.value || null;
       
-      // Send via apiCall - ✅ include urls array and thread_id
-      await apiCall('sendMessage', {
+      // ✅ FIX: Capture the API response properly
+      const apiResponse = await apiCall('sendMessage', {
         recipientNames: recipientsArray,
         message: body,
         sender: currentUser.name,
         targetRole: isReplyMode ? null : targetRole,
         subject: subject || '',
-        urls: urlsArray,  // ✅ Send array of URLs
-        thread_id: threadId  // ✅ Include thread_id for conversation grouping
+        urls: urlsArray,
+        thread_id: threadId
       });
       
-// Success feedback
-let msg;
-if (isReplyMode) {
-  msg = `✅ Reply sent to ${recipient}.`;
-} else if (recipient === 'all') {
-  msg = `✅ Message sent to all ${targetLabel}s.`;
-} else {
-  msg = `✅ Message sent to ${recipient}.`;
-}
-alert(msg);
-
-closeModal('globalModal');
-
-// ✅ FIX: If this was a NEW thread (no prior thread_id), open the thread view immediately
-// so the sender can see their sent message right away
-if (!threadId && result?.thread_id) {
-  // Determine the conversation partner name for display
-  const partnerName = isReplyMode ? recipient : 
-                     (recipient === 'all' ? targetLabel : recipient);
-  
-  // Small delay to ensure modal closes first, then open thread view
-  setTimeout(async () => {
-    if (typeof openThreadView === 'function') {
-      await openThreadView(result.thread_id, partnerName);
-    }
-  }, 300);
-} else {
-  // For replies or existing threads, just refresh notifications
-  if (currentUser?.name && typeof loadNotifications === 'function') {
-    await loadNotifications();
-  }
-}
+      // ✅ Check response
+      if (!apiResponse || !apiResponse.success) {
+        throw new Error(apiResponse?.error || 'Unknown error');
+      }
+      
+      // Success feedback
+      let msg;
+      if (isReplyMode) {
+        msg = `✅ Reply sent to ${recipient}.`;
+      } else if (recipient === 'all') {
+        msg = `✅ Message sent to all ${targetLabel}s.`;
+      } else {
+        msg = `✅ Message sent to ${recipient}.`;
+      }
+      alert(msg);
+      
+      closeModal('globalModal');
+      
+      // ✅ FIX: Use apiResponse (not 'result') to open new thread
+      if (!threadId && apiResponse?.thread_id) {
+        const partnerName = isReplyMode ? recipient : 
+                           (recipient === 'all' ? targetLabel : recipient);
+        
+        setTimeout(async () => {
+          if (typeof openThreadView === 'function') {
+            await openThreadView(apiResponse.thread_id, partnerName);
+          }
+        }, 300);
+      } else {
+        if (currentUser?.name && typeof loadNotifications === 'function') {
+          await loadNotifications();
+        }
+      }
       
     } catch (err) {
       console.error('Send error:', err);
       alert('❌ Failed to send: ' + (err.message || 'Unknown error'));
     } finally {
-      // Re-enable button regardless of success/failure
       sendBtn.disabled = false;
       sendBtn.innerHTML = originalBtnText;
     }
