@@ -124,8 +124,8 @@ function renderNotificationPanel() {
           </div>
         </div>
       </div>
-    `;
-  }).join('');
+` : ''} 
+}).join('');
   
   // Click handler: ✅ AUTO-MARK AS READ when clicked + open thread view
   list.querySelectorAll('[data-id]').forEach(el => {
