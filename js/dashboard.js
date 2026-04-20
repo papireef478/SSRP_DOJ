@@ -39,25 +39,28 @@ async function renderDashboardByRole() {
   // Tasks HTML (for roles that have tasks)
   // ✅ FIX: Added 'master_clerk' + fixed typo in 'chief_justice'
   const rolesWithTasks = ['clerk', 'judge', 'attorney', 'public_defender', 'district_attorney', 'bailiff', 'marshal', 'reporter', 'admin', 'master_clerk', 'chief_justice'];
-  const tasksHtml = rolesWithTasks.includes(role) ? `
-    <div class="card p-6 mb-6">
-      <div class="flex justify-between items-center mb-4">
-        <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg">
-          <i data-lucide="check-square"></i> Daily Tasks
-        </div>
-        ${role === 'clerk' ? '<button id="refreshTasks" class="btn-secondary text-sm py-1 px-3 rounded-lg">Refresh</button>' : ''}
+const tasksHtml = rolesWithTasks.includes(role) ? `
+  <div class="card p-6 mb-6">
+    <div class="flex justify-between items-center mb-4">
+      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg">
+        <i data-lucide="check-square"></i> Daily Tasks
       </div>
-      <ul id="tasksList" class="space-y-2">
-        ${tasks.length > 0 ? tasks.map(task => `
-          <li class="flex items-center gap-2">
-            <input type="checkbox" ${task.status === 'done' ? 'checked' : ''} data-id="${task.id}" class="task-checkbox">
-            <span class="flex-1">${task.task}</span>
-            <span class="text-xs text-gray-500">${task.due || task.frequency || ''}</span>
-          </li>
-        `).join('') : '<li class="text-gray-400 text-sm">No tasks assigned</li>'}
-      </ul>
+      ${role === 'clerk' ? '<button id="refreshTasks" class="btn-secondary text-sm py-1 px-3 rounded-lg">Refresh</button>' : ''}
     </div>
-  ` : '';
+    <ul id="tasksList" class="space-y-2">
+      ${tasks.length > 0 ? tasks.map(task => `
+        <li class="flex items-center gap-2">
+          <input type="checkbox" 
+                 ${task.status === 'done' ? 'checked' : ''} 
+                 data-id="${task.id || ''}" 
+                 class="task-checkbox">
+          <span class="flex-1">${task.task || 'Unnamed task'}</span>
+          <span class="text-xs text-gray-500">${task.due || task.frequency || ''}</span>
+        </li>
+      `).join('') : '<li class="text-gray-400 text-sm">No tasks assigned</li>'}
+    </ul>
+  </div>
+` : '';
   
   // ✅ FIX: Notifications HTML - ADDED MISSING OPENING CARD DIV
   const notifHtml = `
@@ -432,25 +435,30 @@ function attachDashboardEventListeners(role) {
     }
   });
   
-  // Task checkboxes (clerk/admin/master_clerk)
+// Task checkboxes (clerk/admin/master_clerk) - with null safety
 document.querySelectorAll('.task-checkbox')?.forEach(cb => {
   cb.addEventListener('change', async () => {
     if (role === 'clerk' || role === 'admin' || role === 'master_clerk') {
-      const isChecked = cb.checked;
-      const originalState = isChecked; // Store state before API call
+      const taskId = cb.dataset.id;
+      
+      // ✅ Skip if no valid task ID
+      if (!taskId || taskId.trim() === '') {
+        console.warn('Task checkbox missing data-id, skipping update');
+        cb.checked = !cb.checked; // Revert UI
+        return;
+      }
       
       try {
         await apiCall('updateClerkTask', {
-          id: parseInt(cb.dataset.id),
-          status: isChecked ? 'done' : 'pending',
-          completed_by: currentUser.name,
-          // last_completed is handled server-side for timezone accuracy
+          id: parseInt(taskId, 10),
+          status: cb.checked ? 'done' : 'pending',
+          completed_by: currentUser.name
         });
-        // ✅ UI stays as checked/unchecked - no re-render flicker
+        // ✅ Keep checkbox state as-is (no re-render flicker)
       } catch (err) {
         console.error('Failed to update task:', err);
-        // Revert checkbox if API fails
-        cb.checked = !originalState;
+        // Revert checkbox on error
+        cb.checked = !cb.checked;
         alert('❌ Failed to save task. Please check your connection and try again.');
       }
     }
