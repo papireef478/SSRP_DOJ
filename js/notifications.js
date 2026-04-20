@@ -1,6 +1,8 @@
 // ============================================================================
 // NOTIFICATIONS SYSTEM - ENHANCED WITH ACTIONS & VISUAL INDICATORS
 // ============================================================================
+// NOTE: dojNotifications is declared in config.js - DO NOT redeclare here!
+
 // ============================================================================
 // 🔹 HELPER: Safely parse & render message with clickable hyperlinks
 // ============================================================================
@@ -41,44 +43,9 @@ function renderMessageWithLinks(messageText, urlsParam) {
   return html;
 }
 
-async function loadNotifications() {
-  if (!currentUser?.name) return;
-  
-  const container = document.getElementById('dojNotificationsContainer');
-  if (container) {
-    container.innerHTML = '⏳ Loading notifications...';
-  }
-  
-  try {
-    const result = await apiCall('getNotifications', { user_name: currentUser.name });
-    
-    // Clear and replace notifications
-    dojNotifications.length = 0;
-    dojNotifications.push(...(result.notifications || []));
-    
-    // Convert read field from string to boolean AND group by thread
-    dojNotifications.forEach(n => {
-      if (typeof n.read === 'string') {
-        n.read = n.read.toUpperCase() === 'TRUE';
-      }
-    });
-    
-    // ✅ FIX: Group notifications by thread_id to avoid duplicates
-    dojNotifications = groupNotificationsByThread(dojNotifications);
-    
-    updateNotificationBadge();
-    renderNotificationPanel();
-    renderDojNotifications();
-    
-  } catch (err) {
-    console.error('Failed to load notifications:', err);
-    if (container) {
-      container.innerHTML = '❌ Error loading notifications';
-    }
-  }
-}
-
-// ✅ NEW HELPER: Group notifications by thread to avoid duplicates
+// ============================================================================
+// 🔹 HELPER: Group notifications by thread to avoid duplicates
+// ============================================================================
 function groupNotificationsByThread(notifications) {
   const threadMap = new Map();
   
@@ -106,9 +73,62 @@ function groupNotificationsByThread(notifications) {
   );
 }
 
-/**
-Update notification badge count with visual pulse for new messages
-*/
+// ============================================================================
+// 🔹 HELPER: Build display text with conditional "New"/"From" prefix
+// ============================================================================
+function buildNotificationDisplayText(n) {
+  const isUnread = !n.read;
+  const senderName = n.sender_name || 'Unknown';
+  
+  // ✅ Backend sends clean text; frontend adds "New" prefix only for unread
+  return isUnread 
+    ? `📨 New message from ${senderName}` 
+    : `📨 Message from ${senderName}`;
+}
+
+// ============================================================================
+// 🔹 LOAD NOTIFICATIONS FROM API
+// ============================================================================
+async function loadNotifications() {
+  if (!currentUser?.name) return;
+  
+  const container = document.getElementById('dojNotificationsContainer');
+  if (container) {
+    container.innerHTML = '⏳ Loading notifications...';
+  }
+  
+  try {
+    const result = await apiCall('getNotifications', { user_name: currentUser.name });
+    
+    // Clear and replace notifications
+    dojNotifications.length = 0;
+    dojNotifications.push(...(result.notifications || []));
+    
+    // Convert read field from string to boolean
+    dojNotifications.forEach(n => {
+      if (typeof n.read === 'string') {
+        n.read = n.read.toUpperCase() === 'TRUE';
+      }
+    });
+    
+    // ✅ Group notifications by thread_id to avoid duplicates
+    dojNotifications = groupNotificationsByThread(dojNotifications);
+    
+    updateNotificationBadge();
+    renderNotificationPanel();
+    renderDojNotifications();
+    
+  } catch (err) {
+    console.error('Failed to load notifications:', err);
+    if (container) {
+      container.innerHTML = '❌ Error loading notifications';
+    }
+  }
+}
+
+// ============================================================================
+// 🔹 UPDATE NOTIFICATION BADGE COUNT
+// ============================================================================
 function updateNotificationBadge() {
   const badge = document.getElementById('notifBadge');
   if (!badge) return;
@@ -128,9 +148,9 @@ function updateNotificationBadge() {
   }
 }
 
-/**
-Render notification dropdown panel with action buttons
-*/
+// ============================================================================
+// 🔹 RENDER NOTIFICATION DROPDOWN PANEL
+// ============================================================================
 function renderNotificationPanel() {
   const list = document.getElementById('notifList');
   if (!list) return;
@@ -145,20 +165,11 @@ function renderNotificationPanel() {
     const isExpired = n.expires_at && new Date(n.expires_at) < new Date();
     const isAnnouncement = n.subject === 'ANNOUNCEMENT';
     
-    // Extract sender name from text if not available in sender_name field
-    const senderMatch = n.text?.match(/(?:📨\s*)?(?:New\s+)?message\s+from\s+([^:]+):/i);
-    const senderName = n.sender_name || (senderMatch ? senderMatch[1].trim() : 'Unknown');
+    // Use sender_name from metadata (not parsed from text)
+    const senderName = n.sender_name || 'Unknown';
     
-    // ✅ FIX: Conditional display text - "New " only shows when unread
-    const displayText = (() => {
-      const txt = n.text || n.message || '';
-      if (txt && txt.includes('📨')) {
-        // Remove the "New message from" prefix for display - use sender_name instead
-        const cleanText = txt.replace(/📨\s*(?:New\s+)?message\s+from\s+[^:]+:\s*/i, '');
-        return isUnread ? `📨 New message from ${senderName}` : `📨 Message from ${senderName}`;
-      }
-      return txt;
-    })();
+    // ✅ Build display text with conditional "New"/"From" prefix
+    const displayText = buildNotificationDisplayText(n);
     
     // Build thread_id: prefer real thread_id, fallback to msg_+id
     const threadId = n.thread_id || ('msg_' + n.id);
@@ -230,9 +241,9 @@ function renderNotificationPanel() {
   });
 }
 
-/**
-Render notifications in dashboard (latest 5)
-*/
+// ============================================================================
+// 🔹 RENDER NOTIFICATIONS IN DASHBOARD (LATEST 5)
+// ============================================================================
 function renderDojNotifications() {
   const container = document.getElementById('dojNotificationsContainer');
   if (!container) return;
@@ -249,17 +260,11 @@ function renderDojNotifications() {
     const isExpired = n.expires_at && new Date(n.expires_at) < new Date();
     const isAnnouncement = n.subject === 'ANNOUNCEMENT';
     
-    const senderMatch = n.text?.match(/(?:📨\s*)?(?:New\s+)?message\s+from\s+([^:]+):/i);
-    const senderName = n.sender_name || (senderMatch ? senderMatch[1].trim() : 'Unknown');
+    // Use sender_name from metadata
+    const senderName = n.sender_name || 'Unknown';
     
-    // ✅ FIX: Conditional display text
-    const displayText = (() => {
-      const txt = n.text || n.message || '';
-      if (txt && txt.includes('📨')) {
-        return isUnread ? `📨 New message from ${senderName}` : `📨 Message from ${senderName}`;
-      }
-      return txt;
-    })();
+    // ✅ Build display text with conditional "New"/"From" prefix
+    const displayText = buildNotificationDisplayText(n);
     
     const threadId = n.thread_id || ('msg_' + n.id);
     
@@ -291,9 +296,9 @@ function renderDojNotifications() {
   }).join('');
 }
 
-/**
-Mark a notification as read via API - Updates badge instantly
-*/
+// ============================================================================
+// 🔹 MARK NOTIFICATION AS READ
+// ============================================================================
 async function markNotificationRead(id) {
   try {
     const notif = dojNotifications.find(n => n.id === id);
@@ -310,15 +315,14 @@ async function markNotificationRead(id) {
   }
 }
 
-/**
-Reply to a notification
-*/
+// ============================================================================
+// 🔹 REPLY TO A NOTIFICATION
+// ============================================================================
 function replyToNotification(senderName, threadId = '') {
   if (!senderName || senderName === 'Unknown') {
     const notif = dojNotifications.find(n => n.thread_id === threadId || n.id === parseInt(threadId));
-    if (notif?.text) {
-      const match = notif.text.match(/(?:📨\s)?(?:New\s+)?message\s+from\s+([^:]+):/i);
-      if (match) senderName = match[1].trim();
+    if (notif?.sender_name) {
+      senderName = notif.sender_name;
     }
   }
   
@@ -340,14 +344,14 @@ function replyToNotification(senderName, threadId = '') {
   }
 }
 
-/**
-Delete a notification - ✅ FIXED: Actually calls delete endpoint
-*/
+// ============================================================================
+// 🔹 DELETE A NOTIFICATION - Calls correct backend endpoint
+// ============================================================================
 async function deleteNotification(id) {
   if (!confirm('Delete this notification?')) return;
   
   try {
-    // ✅ FIX: Call the correct delete endpoint
+    // ✅ FIX: Call deleteMessage endpoint (not markNotificationRead)
     await apiCall('deleteMessage', { 
       message_id: id,
       deleted_by: currentUser.name
@@ -368,9 +372,10 @@ async function deleteNotification(id) {
     alert('Could not delete notification. Please try again.');
   }
 }
-/**
- * Send a notification to a role
- */
+
+// ============================================================================
+// 🔹 SEND A NOTIFICATION TO A ROLE
+// ============================================================================
 async function sendNotificationToRole(role, message) {
   try {
     await apiCall('sendMessage', {
@@ -383,9 +388,9 @@ async function sendNotificationToRole(role, message) {
   }
 }
 
-/**
- * Open thread view modal showing full conversation - ✅ Shows subject + URLs + PRIVACY
- */
+// ============================================================================
+// 🔹 OPEN THREAD VIEW MODAL - Full conversation with privacy filtering
+// ============================================================================
 async function openThreadView(threadId, otherUser = '') {
   if (!threadId) return;
   
@@ -400,10 +405,10 @@ async function openThreadView(threadId, otherUser = '') {
   `);
   
   try {
-    // ✅ FIX: Pass requestingUser for privacy filtering (backend filters to sender/recipient only)
+    // ✅ Pass requestingUser for privacy filtering (backend filters to sender/recipient only)
     const result = await apiCall('getMessagesByThread', { 
       thread_id: threadId,
-      user_name: currentUser.name  // ✅ Critical for privacy
+      user_name: currentUser.name
     });
     const messages = result.messages || [];
     
@@ -440,13 +445,13 @@ async function openThreadView(threadId, otherUser = '') {
     const conversationPartner = otherUser || messages.find(m => m.sender_name !== currentUser.name)?.sender_name || 'Unknown';
     const subjectDisplay = messages[0]?.subject ? `<span class="text-gray-400 font-normal">• ${messages[0].subject}</span>` : '';
     
-    // ✅ FIX: Build conversation HTML - show URLs for ALL messages, avoid double messages for sender
+    // ✅ Build conversation HTML - show URLs for ALL messages
     const conversationHtml = messages.map(m => {
       const isCurrentUser = m.sender_name === currentUser.name;
       const timestamp = new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
       
-     // ✅ Use helper to render message with clickable URLs
-const messageContent = renderMessageWithLinks(m.message, m.urls || m.url);
+      // Use helper to render message with clickable URLs
+      const messageContent = renderMessageWithLinks(m.message, m.urls || m.url);
       
       return `
         <div class="flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-3">
@@ -463,7 +468,7 @@ const messageContent = renderMessageWithLinks(m.message, m.urls || m.url);
     
     const isAnnouncement = messages[0]?.subject === 'ANNOUNCEMENT';
     
-    // ✅ FIX: Show modal WITHOUT redundant reply button in header (keep only bottom reply box)
+    // ✅ Show modal with reply box at bottom only
     showModal(`
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-xl font-bold text-white">💬 Conversation with ${conversationPartner} ${subjectDisplay}</h3>
@@ -537,9 +542,9 @@ const messageContent = renderMessageWithLinks(m.message, m.urls || m.url);
   }
 }
 
-/**
- * Quick reply from thread view
- */
+// ============================================================================
+// 🔹 QUICK REPLY FROM THREAD VIEW
+// ============================================================================
 function quickReply(recipientName, threadId) {
   const threadMsgs = dojNotifications.filter(n => n.thread_id === threadId);
   const latest = threadMsgs[threadMsgs.length - 1];
@@ -549,21 +554,21 @@ function quickReply(recipientName, threadId) {
   replyToNotification(recipientName, threadId);
 }
 
-/**
- * Initialize notification panel - ✅ Auto-refresh every 4 minutes + ✅ Auto-load on init
- */
+// ============================================================================
+// 🔹 INITIALIZE NOTIFICATION PANEL - Auto-refresh + Auto-load
+// ============================================================================
 function initNotificationPanel() {
   const notifBtn = document.getElementById('notifBtn');
   const notifPanel = document.getElementById('notifPanel');
   
   if (!notifBtn || !notifPanel) return;
   
-  // ✅ FIX: Auto-load notifications on init so they appear even without clicking bell
+  // ✅ Auto-load notifications on init
   if (currentUser?.name) {
     loadNotifications();
   }
   
-  // ✅ AUTO-REFRESH NOTIFICATIONS EVERY 4 MINUTES (3-5 min range from PDF)
+  // ✅ AUTO-REFRESH NOTIFICATIONS EVERY 4 MINUTES
   let notifInterval;
   function startAutoRefresh() {
     if (notifInterval) clearInterval(notifInterval);
@@ -614,3 +619,6 @@ window.sendNotificationToRole = sendNotificationToRole;
 window.initNotificationPanel = initNotificationPanel;
 window.openThreadView = openThreadView;
 window.quickReply = quickReply;
+window.groupNotificationsByThread = groupNotificationsByThread;
+window.buildNotificationDisplayText = buildNotificationDisplayText;
+window.renderMessageWithLinks = renderMessageWithLinks;
