@@ -412,17 +412,8 @@ async function openThreadView(threadId, otherUser = '') {
       const isCurrentUser = m.sender_name === currentUser.name;
       const timestamp = new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
       
-      // ✅ FIX: Display URL links for ALL messages (single url + urls array) - avoid duplicates
-      const urlParts = [];
-      if (m.url && m.url.trim()) urlParts.push(`<a href="${m.url}" target="_blank" class="text-blue-400 hover:underline text-xs mt-1 inline-block">🔗 ${m.url}</a>`);
-      if (m.urls?.length) {
-        m.urls.forEach(u => {
-          if (u && u.trim() && !urlParts.some(p => p.includes(u))) {  // Avoid duplicate if url is also in urls array
-            urlParts.push(`<a href="${u}" target="_blank" class="text-blue-400 hover:underline text-xs mt-1 inline-block">🔗 ${u}</a>`);
-          }
-        });
-      }
-      const urlsDisplay = urlParts.length ? `<br>` + urlParts.join('<br>') : '';
+     // ✅ Use helper to render message with clickable URLs
+const messageContent = renderMessageWithLinks(m.message, m.urls || m.url);
       
       return `
         <div class="flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-3">
