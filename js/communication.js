@@ -273,7 +273,7 @@ alert(msg);
 
 closeModal('globalModal');
 
-// ✅ FIX 1: Add sent message to local notifications IMMEDIATELY so sender sees it
+// ✅ FIX 1: Add sent message to LOCAL notifications array immediately so sender sees it
 if (typeof dojNotifications !== 'undefined' && apiResponse?.thread_id) {
   const sentNotif = {
     id: Date.now(), // temporary local ID
@@ -286,16 +286,17 @@ if (typeof dojNotifications !== 'undefined' && apiResponse?.thread_id) {
     url: urlsArray[0] || '',
     urls: urlsArray,
     created_at: new Date().toISOString(),
-    read: true,
+    read: true, // Mark as read since sender just sent it
     expires_at: new Date(Date.now() + 14*24*60*60*1000).toISOString()
   };
-  // Avoid duplicates if same thread exists
+  // Avoid duplicates
   if (!dojNotifications.find(n => n.thread_id === apiResponse.thread_id)) {
     dojNotifications.unshift(sentNotif);
   }
-  renderNotificationPanel();
-  renderDojNotifications();
-  updateNotificationBadge();
+  // Re-render UI instantly
+  if (typeof updateNotificationBadge === 'function') updateNotificationBadge();
+  if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
+  if (typeof renderDojNotifications === 'function') renderDojNotifications();
 }
 
 // ✅ FIX 2: Use apiResponse (not undefined 'result') to open new thread
