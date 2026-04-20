@@ -433,24 +433,29 @@ function attachDashboardEventListeners(role) {
   });
   
   // Task checkboxes (clerk/admin/master_clerk)
-  document.querySelectorAll('.task-checkbox')?.forEach(cb => {
-    cb.addEventListener('change', async () => {
-      if (role === 'clerk' || role === 'admin' || role === 'master_clerk') {
-        try {
-          await apiCall('updateClerkTask', {
-            id: parseInt(cb.dataset.id),
-            status: cb.checked ? 'done' : 'pending',
-            completed_by: currentUser.name
-          });
-        } catch (err) {
-          console.error('Failed to update task:', err);
-          // Revert checkbox on error
-          cb.checked = !cb.checked;
-        }
+document.querySelectorAll('.task-checkbox')?.forEach(cb => {
+  cb.addEventListener('change', async () => {
+    if (role === 'clerk' || role === 'admin' || role === 'master_clerk') {
+      const isChecked = cb.checked;
+      const originalState = isChecked; // Store state before API call
+      
+      try {
+        await apiCall('updateClerkTask', {
+          id: parseInt(cb.dataset.id),
+          status: isChecked ? 'done' : 'pending',
+          completed_by: currentUser.name,
+          // last_completed is handled server-side for timezone accuracy
+        });
+        // ✅ UI stays as checked/unchecked - no re-render flicker
+      } catch (err) {
+        console.error('Failed to update task:', err);
+        // Revert checkbox if API fails
+        cb.checked = !originalState;
+        alert('❌ Failed to save task. Please check your connection and try again.');
       }
-    });
+    }
   });
- 
+});
   // Role-specific buttons
   if (role === 'judge') {
     document.getElementById('recusalBtn')?.addEventListener('click', () => {
