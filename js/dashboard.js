@@ -1,3 +1,18 @@
+// ============================================================================
+// 🔹 HELPER: Format ISO date to MM/DD/YYYY
+// ============================================================================
+function formatDateForDisplay(dateStr) {
+  if (!dateStr) return '';
+  // Already in MM/DD/YYYY format
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) return dateStr;
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
+  } catch (e) {
+    return dateStr;
+  }
+}
 // ============================================
 // DASHBOARD - ALL ROLES WITH REAL API
 // ============================================
@@ -48,9 +63,6 @@ function formatDateForDisplay(dateStr) {
     return dateStr;
   }
 }
-
-// In tasksHtml template:
-<span class="text-xs text-gray-500">${formatDateForDisplay(task.due_date || task.due || task.frequency || '')}</span>
 
 // Tasks HTML (for roles that have tasks) - with proper date formatting + null-safe data-id
 const rolesWithTasks = ['clerk', 'judge', 'attorney', 'public_defender', 'district_attorney', 'bailiff', 'marshal', 'reporter', 'admin', 'master_clerk', 'chief_justice'];
@@ -471,13 +483,11 @@ document.querySelectorAll('.task-checkbox')?.forEach(cb => {
       
       try {
         // ✅ FIX: Wrap params in 'data' object so backend receives them correctly
-        await apiCall('updateClerkTask', {
-          data: {
-            id: parseInt(taskId, 10),
-            status: cb.checked ? 'done' : 'pending',
-            completed_by: currentUser.name
-          }
-        });
+await apiCall('updateClerkTask', {
+  id: parseInt(taskId, 10),
+  status: cb.checked ? 'done' : 'pending',
+  completed_by: currentUser.name
+});
         // ✅ Keep checkbox state as-is (no re-render flicker)
       } catch (err) {
         console.error('Failed to update task:', err);
