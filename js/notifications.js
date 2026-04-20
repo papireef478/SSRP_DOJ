@@ -108,21 +108,13 @@ function renderNotificationPanel() {
           </p>
           
           ${!isAnnouncement && !isExpired ? `
-            <div class="flex gap-1 flex-shrink-0" onclick="event.stopPropagation()">
-              ${isUnread ? `
-                <button onclick="markNotificationRead(${n.id}); event.stopPropagation();" 
-                        class="text-[10px] text-[#c9a227] hover:text-[#facc15] px-1 py-0.5 rounded transition"
-                        title="Mark as read">✓</button>
-              ` : ''}
-              <button onclick="replyToNotification('${senderName}', '${threadId}'); event.stopPropagation();" 
-                      class="text-[10px] text-blue-400 hover:text-blue-300 px-1 py-0.5 rounded transition"
-                      title="Reply">↩</button>
-              <button onclick="deleteNotification(${n.id}); event.stopPropagation();" 
-                      class="text-[10px] text-red-400 hover:text-red-300 px-1 py-0.5 rounded transition"
-                      title="Delete">✕</button>
-            </div>
-          ` : ''}
-        </div>
+<div class="flex gap-1 flex-shrink-0" onclick="event.stopPropagation()">
+  ${isUnread ? `
+    <button onclick="markNotificationRead(${n.id}); event.stopPropagation();" 
+           class="text-[10px] text-[#c9a227] hover:text-[#facc15] px-1 py-0.5 rounded transition"
+           title="Mark as read">✓</button>
+  ` : ''}
+</div>
         
         <div class="flex justify-between items-center mt-1 text-[10px] text-gray-500 pl-4">
           <span>${new Date(n.created_at || n.timestamp || Date.now()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
@@ -212,14 +204,11 @@ function renderDojNotifications() {
         </div>
         
         ${!isAnnouncement && !isExpired ? `
-          <div class="flex gap-1 ml-2 flex-shrink-0" onclick="event.stopPropagation()">
-            <button onclick="replyToNotification('${senderName}', '${threadId}'); event.stopPropagation();" 
-                    class="text-[10px] text-blue-400 hover:text-blue-300 px-1 py-0.5 rounded transition"
-                    title="Reply">↩</button>
-            <button onclick="deleteNotification(${n.id}); event.stopPropagation();" 
-                    class="text-[10px] text-red-400 hover:text-red-300 px-1 py-0.5 rounded transition"
-                    title="Delete">✕</button>
-          </div>
+<div class="flex gap-1 ml-2 flex-shrink-0" onclick="event.stopPropagation()">
+  <button onclick="deleteNotification(${n.id}); event.stopPropagation();" 
+         class="text-[10px] text-red-400 hover:text-red-300 px-1 py-0.5 rounded transition"
+         title="Delete">🗑️</button>
+</div>
         ` : ''}
       </div>
     `;
@@ -240,7 +229,7 @@ async function markNotificationRead(id) {
     }
     await apiCall('markNotificationRead', { id });
   } catch (err) {
-    console.error('Failed to mark notification read:', err);
+    console.error('Failed to sync read status:', err);
   }
 }
 
