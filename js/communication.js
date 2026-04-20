@@ -256,22 +256,38 @@ function setupSendMessageHandler(targetRole, targetLabel, isReplyMode) {
         thread_id: threadId  // ✅ Include thread_id for conversation grouping
       });
       
-      // Success feedback
-      let msg;
-      if (isReplyMode) {
-        msg = `✅ Reply sent to ${recipient}.`;
-      } else if (recipient === 'all') {
-        msg = `✅ Message sent to all ${targetLabel}s.`;
-      } else {
-        msg = `✅ Message sent to ${recipient}.`;
-      }
-      alert(msg);
-      
-      // Close modal and refresh notifications
-      closeModal('globalModal');
-      if (currentUser?.name && typeof loadNotifications === 'function') {
-        await loadNotifications();
-      }
+// Success feedback
+let msg;
+if (isReplyMode) {
+  msg = `✅ Reply sent to ${recipient}.`;
+} else if (recipient === 'all') {
+  msg = `✅ Message sent to all ${targetLabel}s.`;
+} else {
+  msg = `✅ Message sent to ${recipient}.`;
+}
+alert(msg);
+
+closeModal('globalModal');
+
+// ✅ FIX: If this was a NEW thread (no prior thread_id), open the thread view immediately
+// so the sender can see their sent message right away
+if (!threadId && result?.thread_id) {
+  // Determine the conversation partner name for display
+  const partnerName = isReplyMode ? recipient : 
+                     (recipient === 'all' ? targetLabel : recipient);
+  
+  // Small delay to ensure modal closes first, then open thread view
+  setTimeout(async () => {
+    if (typeof openThreadView === 'function') {
+      await openThreadView(result.thread_id, partnerName);
+    }
+  }, 300);
+} else {
+  // For replies or existing threads, just refresh notifications
+  if (currentUser?.name && typeof loadNotifications === 'function') {
+    await loadNotifications();
+  }
+}
       
     } catch (err) {
       console.error('Send error:', err);
