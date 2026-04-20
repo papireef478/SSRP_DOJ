@@ -655,25 +655,39 @@ input::placeholder, textarea::placeholder {
   }
 }
 
-/* ✅ Message hyperlink styling */
-.message-link {
+/* ✅ Message hyperlink styling - prevents overflow & forces wrapping */
+.msg-link {
   color: #60a5fa;
   text-decoration: none;
   font-size: 0.85em;
   display: inline-block;
   margin-top: 4px;
   word-break: break-all;
+  overflow-wrap: anywhere;
+  max-width: 100%;
   transition: color 0.2s;
 }
 
-.message-link:hover {
+.msg-link:hover {
   color: #93c5fd;
   text-decoration: underline;
 }
 
-.message-link::before {
+.msg-link::before {
   content: "🔗 ";
   margin-right: 2px;
+}
+
+/* Ensure message bubbles never overflow */
+#threadMessages {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+#threadMessages p {
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  max-width: 100%;
 }
 
 /* ============================================
