@@ -20,19 +20,25 @@ function addUrlField() {
   const container = document.getElementById('urlFieldsContainer');
   if (!container) return;
   
+  // ✅ LIMIT: Only allow 2 URL fields max
+  if (container.children.length >= 2) {
+    alert('Maximum 2 URL links allowed per message.');
+    return;
+  }
+  
   const div = document.createElement('div');
   div.className = 'flex gap-2 items-center animate-fade-in';
-  div.innerHTML = `
-    <input type="url" name="messageUrl" class="flex-1 p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="https://example.com">
-    <button type="button" onclick="addUrlField()" class="text-green-400 hover:text-green-300 text-xl font-bold" title="Add URL">+</button>
-    <button type="button" onclick="removeUrlField(this)" class="text-red-400 hover:text-red-300 text-xl font-bold" title="Remove">×</button>
-  `;
+  div.innerHTML = `<input type="url" name="messageUrl" class="flex-1 p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="https://example.com"> 
+<button type="button" onclick="addUrlField()" class="text-green-400 hover:text-green-300 text-xl font-bold" title="Add URL">+</button> 
+<button type="button" onclick="removeUrlField(this)" class="text-red-400 hover:text-red-300 text-xl font-bold" title="Remove">×</button>`;
+  
   container.appendChild(div);
   
-  // Hide "+" on all but last field
+  // Hide "+" on all but last field (and only if < 2 fields)
   container.querySelectorAll('button[onclick="addUrlField()"]').forEach((btn, idx, arr) => {
-    btn.classList.toggle('hidden', idx < arr.length - 1);
+    btn.classList.toggle('hidden', idx < arr.length - 1 || arr.length >= 2);
   });
+  
   // Show "×" on all fields when >1
   container.querySelectorAll('button[onclick^="removeUrlField"]').forEach(btn => {
     btn.classList.toggle('hidden', container.children.length <= 1);
@@ -221,7 +227,14 @@ function setupSendMessageHandler(targetRole, targetLabel, isReplyMode) {
       const urlsArray = Array.from(urlInputs)
         .map(input => input.value?.trim())
         .filter(url => url && url.startsWith('http'));
-      
+     
+      // ✅ VALIDATION: Limit to 2 URLs max
+if (urlsArray.length > 2) {
+  alert('⚠️ Maximum 2 URL links allowed per message. Please remove excess links.');
+  sendBtn.disabled = false;
+  sendBtn.innerHTML = originalBtnText;
+  return;
+}     
       // Validation
       if (!currentUser?.name) {
         alert('⚠️ Please log in first to send messages.');
