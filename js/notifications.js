@@ -36,7 +36,7 @@ function renderMessageWithLinks(messageText, urlsParam) {
     uniqueUrls.forEach(url => {
       const safeUrl = url.startsWith('http') ? url : `https://${url}`;
       const displayText = url.length > 40 ? url.substring(0, 37) + '...' : url;
-      // ✅ FIX: Render URL as separate clickable bubble/link below message
+      // ✅ Render URL as separate clickable link below message
       html += `<br><a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer" class="msg-link">🔗 ${escapeHtml(displayText)}</a>`;
     });
   }
@@ -75,19 +75,20 @@ function groupNotificationsByThread(notifications) {
 }
 
 // ============================================================================
-// 🔹 HELPER: Build display text with conditional "New"/"Regarding" prefix
+// 🔹 HELPER: Build clean display text based on read status
+// ✅ New unread: "📨 New message: Subject"
+// ✅ Read: "Subject" (just the subject, no prefix)
 // ============================================================================
 function buildNotificationDisplayText(n) {
   const isUnread = !n.read;
-  const senderName = n.sender_name || 'Unknown';
-  const subject = n.text || n.subject || 'No subject';  // ✅ Backend stores just subject in n.text
+  const subject = n.text || n.subject || 'No subject';  // Backend stores just subject in n.text
   
-  // ✅ FIX: Frontend adds prefix based on read status
-  // Unread: "📨 New message regarding: [subject]"
-  // Read: "📨 Message regarding: [subject]"
+  // ✅ Clean format per requirements:
+  // - Unread: "📨 New message: Welcome Harmony!"
+  // - Read: "Welcome Harmony!"
   return isUnread 
-    ? `📨 New message regarding: ${subject}` 
-    : `📨 Message regarding: ${subject}`;
+    ? `📨 New message: ${subject}` 
+    : `${subject}`;
 }
 
 // ============================================================================
@@ -132,6 +133,7 @@ async function loadNotifications() {
 
 // ============================================================================
 // 🔹 UPDATE NOTIFICATION BADGE COUNT
+// ✅ Only counts unread notifications (new messages)
 // ============================================================================
 function updateNotificationBadge() {
   const badge = document.getElementById('notifBadge');
@@ -154,6 +156,7 @@ function updateNotificationBadge() {
 
 // ============================================================================
 // 🔹 RENDER NOTIFICATION DROPDOWN PANEL
+// ✅ Clean text format + instant badge update on click
 // ============================================================================
 function renderNotificationPanel() {
   const list = document.getElementById('notifList');
@@ -169,10 +172,7 @@ function renderNotificationPanel() {
     const isExpired = n.expires_at && new Date(n.expires_at) < new Date();
     const isAnnouncement = n.subject === 'ANNOUNCEMENT';
     
-    // ✅ Use sender_name from metadata (not parsed from text)
-    const senderName = n.sender_name || 'Unknown';
-    
-    // ✅ Build display text with conditional "New"/"Regarding" prefix
+    // ✅ Build clean display text: "📨 New message: Subject" or "Subject"
     const displayText = buildNotificationDisplayText(n);
     
     // Build thread_id: prefer real thread_id, fallback to msg_+id
@@ -181,8 +181,7 @@ function renderNotificationPanel() {
     return `
       <div class="p-3 border-b border-gray-700 hover:bg-gray-700/50 cursor-pointer transition relative ${isUnread ? 'bg-[#c9a227]/10' : ''} ${isExpired ? 'opacity-50' : ''}" 
           data-id="${n.id}" 
-          data-thread-id="${threadId}"
-          data-sender="${senderName}">
+          data-thread-id="${threadId}">
         
         ${isUnread ? '<span class="absolute left-2 top-4 w-2 h-2 bg-[#c9a227] rounded-full"></span>' : ''}
         
@@ -216,30 +215,35 @@ function renderNotificationPanel() {
     `;
   }).join('');
   
-  // Click handler: ✅ AUTO-MARK AS READ when clicked + open thread view
+  // ✅ Click handler: Auto-mark as read + update badge INSTANTLY
   list.querySelectorAll('[data-id]').forEach(el => {
     el.addEventListener('click', (e) => {
       if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
       
       const id = parseInt(el.dataset.id);
       const threadId = el.dataset.threadId;
-      const sender = el.dataset.sender;
       
       // ✅ AUTO-MARK AS READ when user clicks to open
       const notif = dojNotifications.find(n => n.id === id);
       if (notif && !notif.read) {
-        notif.read = true;  // Update local state instantly
-        updateNotificationBadge();  // Update badge instantly
-        renderNotificationPanel();  // Re-render panel
-        renderDojNotifications();  // Re-render dashboard
+        notif.read = true;  // ✅ Update local state FIRST
+        updateNotificationBadge();  // ✅ Update badge INSTANTLY
+        renderNotificationPanel();  // ✅ Re-render panel
+        renderDojNotifications();  // ✅ Update dashboard
         
-        // Sync to backend
-        apiCall('markNotificationRead', { id }).catch(err => console.error('Failed to sync read status:', err));
+        // Sync to backend (fire-and-forget)
+        apiCall('markNotificationRead', { id }).catch(err => {
+          console.error('Failed to sync read:', err);
+          // Revert if sync fails
+          notif.read = false;
+          updateNotificationBadge();
+          renderNotificationPanel();
+        });
       }
       
       // Open thread view for reading
       if (threadId) {
-        openThreadView(threadId, sender);
+        openThreadView(threadId);
       }
     });
   });
@@ -247,6 +251,7 @@ function renderNotificationPanel() {
 
 // ============================================================================
 // 🔹 RENDER NOTIFICATIONS IN DASHBOARD (LATEST 5)
+// ✅ Same clean text format
 // ============================================================================
 function renderDojNotifications() {
   const container = document.getElementById('dojNotificationsContainer');
@@ -264,10 +269,7 @@ function renderDojNotifications() {
     const isExpired = n.expires_at && new Date(n.expires_at) < new Date();
     const isAnnouncement = n.subject === 'ANNOUNCEMENT';
     
-    // Use sender_name from metadata
-    const senderName = n.sender_name || 'Unknown';
-    
-    // ✅ Build display text with conditional "New"/"Regarding" prefix
+    // ✅ Build clean display text
     const displayText = buildNotificationDisplayText(n);
     
     const threadId = n.thread_id || ('msg_' + n.id);
@@ -275,12 +277,11 @@ function renderDojNotifications() {
     return `
       <div class="flex justify-between items-start py-3 border-b border-gray-700 text-sm ${isUnread ? 'bg-gray-700/30' : ''} ${isExpired ? 'opacity-50' : ''} relative" 
           data-id="${n.id}" 
-          data-thread-id="${threadId}"
-          data-sender="${senderName}">
+          data-thread-id="${threadId}">
         
         ${isUnread ? '<span class="w-2 h-2 bg-[#c9a227] rounded-full mt-1.5 flex-shrink-0"></span>' : ''}
         
-        <div class="flex-1 cursor-pointer pl-3" onclick="openThreadView('${threadId}', '${senderName}')">
+        <div class="flex-1 cursor-pointer pl-3" onclick="openThreadView('${threadId}')">
           ${displayText}
         </div>
         
@@ -321,41 +322,38 @@ async function markNotificationRead(id) {
 
 // ============================================================================
 // 🔹 REPLY TO A NOTIFICATION
+// ✅ Preserves original subject for replies
 // ============================================================================
 function replyToNotification(senderName, threadId = '') {
-  if (!senderName || senderName === 'Unknown') {
-    const notif = dojNotifications.find(n => n.thread_id === threadId || n.id === parseInt(threadId));
-    if (notif?.sender_name) {
-      senderName = notif.sender_name;
-    }
-  }
-  
-  if (!senderName || senderName === 'Unknown') {
-    if (threadId) { openThreadView(threadId); return; }
-    alert('Cannot identify sender. Opening conversation view.');
-    return;
-  }
+  if (!threadId) return;
   
   const orig = dojNotifications.find(n => n.thread_id === threadId || n.id === parseInt(threadId));
-  const originalSubject = orig?.subject || '';
-  const originalMessage = orig?.text || orig?.message || '';
+  const originalSubject = orig?.subject || orig?.text || '';
+  const originalMessage = orig?.message || '';
   
   if (typeof closeModal === 'function') closeModal('globalModal');
   
   if (typeof showCommunicationModal === 'function') {
-    window.replyContext = { replyTo: senderName, threadId, subject: originalSubject, message: originalMessage };
+    // ✅ Store reply context with preserved subject
+    window.replyContext = { 
+      replyTo: senderName, 
+      threadId, 
+      subject: originalSubject, 
+      message: originalMessage 
+    };
     showCommunicationModal('any', 'User');
   }
 }
 
 // ============================================================================
-// 🔹 DELETE A NOTIFICATION - Calls correct backend endpoint
+// 🔹 DELETE A NOTIFICATION
+// ✅ Calls correct backend endpoint
 // ============================================================================
 async function deleteNotification(id) {
   if (!confirm('Delete this notification?')) return;
   
   try {
-    // ✅ FIX: Call deleteMessage endpoint (not markNotificationRead)
+    // ✅ Call deleteMessage endpoint (not markNotificationRead)
     await apiCall('deleteMessage', { 
       message_id: id,
       deleted_by: currentUser.name
@@ -393,9 +391,10 @@ async function sendNotificationToRole(role, message) {
 }
 
 // ============================================================================
-// 🔹 OPEN THREAD VIEW MODAL - Full conversation with privacy filtering
+// 🔹 OPEN THREAD VIEW MODAL
+// ✅ Shows URLs, preserves subject, marks read on close
 // ============================================================================
-async function openThreadView(threadId, otherUser = '') {
+async function openThreadView(threadId) {
   if (!threadId) return;
   
   showModal(`
@@ -409,7 +408,6 @@ async function openThreadView(threadId, otherUser = '') {
   `);
   
   try {
-    // ✅ Pass requestingUser for privacy filtering (backend filters to sender/recipient only)
     const result = await apiCall('getMessagesByThread', { 
       thread_id: threadId,
       user_name: currentUser.name
@@ -446,15 +444,19 @@ async function openThreadView(threadId, otherUser = '') {
       return;
     }
     
-    const conversationPartner = otherUser || messages.find(m => m.sender_name !== currentUser.name)?.sender_name || 'Unknown';
-    const subjectDisplay = messages[0]?.subject ? `<span class="text-gray-400 font-normal">• ${messages[0].subject}</span>` : '';
+    // Get conversation partner (other person in thread)
+    const conversationPartner = messages.find(m => m.sender_name !== currentUser.name)?.sender_name || 'Unknown';
+    
+    // ✅ Preserve subject from first message in thread (prevents "No subject" in replies)
+    const originalSubject = messages[0]?.subject || messages[0]?.text || '';
+    const subjectDisplay = originalSubject ? `<span class="text-gray-400 font-normal">• ${originalSubject}</span>` : '';
     
     // ✅ Build conversation HTML - show URLs for ALL messages using helper
     const conversationHtml = messages.map(m => {
       const isCurrentUser = m.sender_name === currentUser.name;
       const timestamp = new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
       
-      // ✅ Use helper to render message with clickable URLs as separate bubbles
+      // ✅ Use helper to render message with clickable URLs
       const messageContent = renderMessageWithLinks(m.message, m.urls || m.url);
       
       return `
@@ -475,7 +477,7 @@ async function openThreadView(threadId, otherUser = '') {
     // ✅ Show modal with reply box at bottom only
     showModal(`
       <div class="flex justify-between items-center mb-4">
-        <h3 class="text-xl font-bold text-white">💬 Conversation with ${conversationPartner} ${subjectDisplay}</h3>
+        <h3 class="text-xl font-bold text-white">💬 ${conversationPartner} ${subjectDisplay}</h3>
         <button id="closeThreadModal" class="text-gray-400 hover:text-white text-2xl">&times;</button>
       </div>
       
@@ -496,23 +498,33 @@ async function openThreadView(threadId, otherUser = '') {
     const messagesContainer = document.getElementById('threadMessages');
     if (messagesContainer) messagesContainer.scrollTop = messagesContainer.scrollHeight;
     
-    // ✅ FIX: Auto-mark as read when modal closes (via X button)
+    // ✅ FIX: Mark as read when modal closes via X button OR reply send
+    const markAsReadOnClose = () => {
+      const notif = dojNotifications.find(n => n.thread_id === threadId);
+      if (notif && !notif.read) {
+        notif.read = true;
+        updateNotificationBadge();
+        renderNotificationPanel();
+        renderDojNotifications();
+        apiCall('markNotificationRead', { id: notif.id }).catch(err => {
+          console.error('Failed to sync read:', err);
+          notif.read = false;
+          updateNotificationBadge();
+          renderNotificationPanel();
+        });
+      }
+    };
+    
+    // Close button handler
     const closeBtn = document.getElementById('closeThreadModal');
     if (closeBtn) {
       closeBtn.addEventListener('click', () => {
         closeModal('globalModal');
-        // ✅ Mark notification as read when closing modal
-        const notif = dojNotifications.find(n => n.thread_id === threadId);
-        if (notif && !notif.read) {
-          notif.read = true;
-          updateNotificationBadge();
-          renderNotificationPanel();
-          renderDojNotifications();
-          apiCall('markNotificationRead', { id: notif.id }).catch(err => console.error('Failed to sync read:', err));
-        }
+        markAsReadOnClose();
       });
     }
     
+    // Reply sending logic
     if (!isAnnouncement) {
       document.getElementById('sendThreadReply')?.addEventListener('click', async () => {
         const replyText = document.getElementById('threadReply')?.value?.trim();
@@ -530,10 +542,12 @@ async function openThreadView(threadId, otherUser = '') {
             message: replyText,
             sender: currentUser.name,
             thread_id: threadId,
-            subject: '',
+            subject: originalSubject || '',  // ✅ Preserve original subject in replies
             urls: []
           });
-          await openThreadView(threadId, conversationPartner);
+          // Mark as read after sending reply
+          markAsReadOnClose();
+          await openThreadView(threadId);
         } catch (err) {
           alert('❌ Failed to send: ' + (err.message || 'Unknown error'));
           if (sendBtn) {
@@ -562,14 +576,15 @@ async function openThreadView(threadId, otherUser = '') {
     `);
   }
 }
+
 // ============================================================================
 // 🔹 QUICK REPLY FROM THREAD VIEW
 // ============================================================================
 function quickReply(recipientName, threadId) {
   const threadMsgs = dojNotifications.filter(n => n.thread_id === threadId);
   const latest = threadMsgs[threadMsgs.length - 1];
-  const subject = latest?.subject || '';
-  const message = latest?.text || latest?.message || '';
+  const subject = latest?.subject || latest?.text || '';
+  const message = latest?.message || '';
   closeModal('globalModal');
   replyToNotification(recipientName, threadId);
 }
