@@ -38,7 +38,7 @@ async function renderDashboardByRole() {
   // Helper: Format ISO date to MM/DD/YYYY
 function formatDateForDisplay(dateStr) {
   if (!dateStr) return '';
-  // If already in MM/DD/YYYY format, return as-is
+  // Already in MM/DD/YYYY format
   if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) return dateStr;
   try {
     const date = new Date(dateStr);
@@ -48,6 +48,9 @@ function formatDateForDisplay(dateStr) {
     return dateStr;
   }
 }
+
+// In tasksHtml template:
+<span class="text-xs text-gray-500">${formatDateForDisplay(task.due_date || task.due || task.frequency || '')}</span>
 
 // Tasks HTML (for roles that have tasks) - with proper date formatting + null-safe data-id
 const rolesWithTasks = ['clerk', 'judge', 'attorney', 'public_defender', 'district_attorney', 'bailiff', 'marshal', 'reporter', 'admin', 'master_clerk', 'chief_justice'];
@@ -456,51 +459,32 @@ function attachDashboardEventListeners(role) {
 // Task checkboxes (clerk/admin/master_clerk) - with strict ID validation
 document.querySelectorAll('.task-checkbox')?.forEach(cb => {
   cb.addEventListener('change', async () => {
-    // ✅ Check if user is logged in
-    if (!currentUser?.name) {
-      console.warn('User not logged in, cannot update task');
-      cb.checked = !cb.checked; // Revert UI
-      alert('⚠️ Please log in first to update tasks.');
-      return;
-    }
-    
-    // ✅ Check if role is authorized
-    if (role !== 'clerk' && role !== 'admin' && role !== 'master_clerk') {
-      console.warn('Role not authorized to update tasks:', role);
-      cb.checked = !cb.checked; // Revert UI
-      return;
-    }
-    
-    // ✅ Get and validate task ID from data attribute
-    const taskIdStr = cb.dataset.id;
-    if (!taskIdStr || taskIdStr.trim() === '' || isNaN(parseInt(taskIdStr, 10))) {
-      console.warn('Invalid or missing task ID:', taskIdStr);
-      cb.checked = !cb.checked; // Revert UI
-      alert('❌ Invalid task ID. Please refresh the page and try again.');
-      return;
-    }
-    
-    const taskId = parseInt(taskIdStr, 10);
-    if (taskId <= 0) {
-      console.warn('Task ID must be positive:', taskId);
-      cb.checked = !cb.checked; // Revert UI
-      alert('❌ Invalid task ID. Please refresh and try again.');
-      return;
-    }
-    
-    try {
-      // ✅ Call backend with validated ID
-      await apiCall('updateClerkTask', {
-        id: taskId,  // ✅ Must be a valid positive integer
-        status: cb.checked ? 'done' : 'pending',
-        completed_by: currentUser.name
-      });
-      // ✅ Keep checkbox state as-is (no re-render flicker)
-    } catch (err) {
-      console.error('Failed to update task:', err);
-      // Revert checkbox on error
-      cb.checked = !cb.checked;
-      alert('❌ Failed to save task: ' + (err.message || 'Please check your connection and try again.'));
+    if (role === 'clerk' || role === 'admin' || role === 'master_clerk') {
+      const taskId = cb.dataset.id;
+      
+      // ✅ Skip if no valid task ID
+      if (!taskId || taskId.trim() === '' || isNaN(parseInt(taskId))) {
+        console.warn('Invalid or missing task ID:', taskId);
+        cb.checked = !cb.checked; // Revert UI
+        return;
+      }
+      
+      try {
+        // ✅ FIX: Wrap params in 'data' object so backend receives them correctly
+        await apiCall('updateClerkTask', {
+          data: {
+            id: parseInt(taskId, 10),
+            status: cb.checked ? 'done' : 'pending',
+            completed_by: currentUser.name
+          }
+        });
+        // ✅ Keep checkbox state as-is (no re-render flicker)
+      } catch (err) {
+        console.error('Failed to update task:', err);
+        // Revert checkbox on error
+        cb.checked = !cb.checked;
+        alert('❌ Failed to save task: ' + (err.message || 'Please check your connection and try again.'));
+      }
     }
   });
 });
