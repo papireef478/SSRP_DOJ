@@ -275,7 +275,6 @@ function renderNotificationPanel() {
     });
   });
 }
-
 // ============================================================================
 // 🔹 RENDER NOTIFICATIONS IN DASHBOARD (LATEST 5)
 // ✅ Same clean text format, hide sent messages
@@ -333,7 +332,6 @@ function renderDojNotifications() {
     `;
   }).join('');
 }
-
 // ============================================================================
 // 🔹 MARK NOTIFICATION AS READ
 // ============================================================================
