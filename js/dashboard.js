@@ -55,7 +55,7 @@ const tasksHtml = rolesWithTasks.includes(role) ? `
                  data-id="${task.id || ''}" 
                  class="task-checkbox">
           <span class="flex-1">${task.task || 'Unnamed task'}</span>
-          <span class="text-xs text-gray-500">${task.due || task.frequency || ''}</span>
+          <span class="text-xs text-gray-500">${task.due_date || task.due || task.frequency || ''}</span>
         </li>
       `).join('') : '<li class="text-gray-400 text-sm">No tasks assigned</li>'}
     </ul>
