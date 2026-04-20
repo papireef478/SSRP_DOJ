@@ -1,8 +1,6 @@
 // ============================================================================
 // NOTIFICATIONS SYSTEM - ENHANCED WITH ACTIONS & VISUAL INDICATORS
 // ============================================================================
-// NOTE: dojNotifications is declared in config.js - DO NOT redeclare here!
-
 // ============================================================================
 // 🔹 HELPER: Safely parse & render message with clickable hyperlinks
 // ============================================================================
@@ -32,11 +30,13 @@ function renderMessageWithLinks(messageText, urlsParam) {
   }
   
   if (urlsArray.length > 0) {
+    // ✅ FIX: Deduplicate URLs and ensure each appears only ONCE
     const uniqueUrls = [...new Set(urlsArray)].filter(u => u && u.trim());
+    
     uniqueUrls.forEach(url => {
       const safeUrl = url.startsWith('http') ? url : `https://${url}`;
       const displayText = url.length > 40 ? url.substring(0, 37) + '...' : url;
-      // ✅ Render URL as separate clickable link below message
+      // ✅ Render URL link ONCE with single 🔗 emoji
       html += `<br><a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer" class="msg-link">🔗 ${escapeHtml(displayText)}</a>`;
     });
   }
@@ -457,7 +457,7 @@ async function openThreadView(threadId) {
       const timestamp = new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
       
       // ✅ Use helper to render message with clickable URLs
-      const messageContent = renderMessageWithLinks(m.message, m.urls || m.url);
+      const messageContent = renderMessageWithLinks(m.message, m.urls);
       
       return `
         <div class="flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-3">
