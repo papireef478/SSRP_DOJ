@@ -12,13 +12,20 @@ async function renderDashboardByRole() {
   const role = currentUser.role;
   
   // Load real tasks for clerks
-  let tasks = [];
-  if (role === 'clerk') {
-    try {
-      const tasksData = await apiCall('getClerkTasks');
-      tasks = tasksData.tasks || [];
-    } catch (err) {
-      console.error('Failed to load clerk tasks:', err);
+let tasks = [];
+if (role === 'clerk' || role === 'admin' || role === 'master_clerk') {
+  try {
+    const tasksData = await apiCall('getClerkTasks');
+    // ✅ Filter tasks by clerk_type column
+    tasks = (tasksData.tasks || []).filter(task => {
+      const clerkType = task.clerk_type?.toLowerCase() || 'all';
+      if (clerkType === 'all') return true; // Show to both clerks and admins
+      if (clerkType === 'admin' && (role === 'admin' || role === 'master_clerk')) return true;
+      if (clerkType === 'clerk' && role === 'clerk') return true;
+      return false;
+    });
+  } catch (err) {
+    console.error('Failed to load clerk tasks:', err);
       // Fallback to mock tasks if API fails
       tasks = [
         { id: 1, task: "Check Discord tickets", due: "Today", status: "pending" },
@@ -30,7 +37,7 @@ async function renderDashboardByRole() {
   }
   
   // Tasks HTML (for roles that have tasks)
-  const rolesWithTasks = ['clerk', 'judge', 'attorney', 'public_defender', 'district_attorney', 'bailiff', 'marshal', 'reporter', 'admin', 'chief_justice'];
+  const rolesWithTasks = ['clerk', 'judge', 'attorney', 'public_defender', 'district_attorney', 'bailiff', 'marshal', 'reporter', 'admin', 'master_clerk', 'chief_justice'];
   const tasksHtml = rolesWithTasks.includes(role) ? `
     <div class="card p-6 mb-6">
       <div class="flex justify-between items-center mb-4">
@@ -53,7 +60,7 @@ async function renderDashboardByRole() {
   
   // Notifications HTML (all roles)
   const notifHtml = `
-    <div class="card p-6 mb-6">
+    
       <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
         <i data-lucide="bell"></i> DOJ Notifications
       </div>
@@ -109,7 +116,7 @@ async function renderDashboardByRole() {
   }
   
   const commHtml = `
-    <div class="card p-6 mb-6">
+    
       <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
         <i data-lucide="message-square"></i> Communications
       </div>
@@ -274,40 +281,65 @@ async function renderDashboardByRole() {
         <button id="uploadTranscriptBtn" class="btn-secondary py-2 px-4 rounded-lg">Upload Transcript URL</button>
       </div>
     `;
-  } else if (role === 'admin') {
-    roleSpecific = `
-      <div class="card p-6 mb-6">
-        <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
-          <i data-lucide="users"></i> User Management
-        </div>
-        <button id="userMgmtBtn" class="btn-secondary py-2 px-4 rounded-lg">Manage Users</button>
+} else if (role === 'admin') {
+  roleSpecific = `
+    <!-- ✅ NEW: New Filing Section (same as Clerk) -->
+    <div class="card p-6 mb-6">
+      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+        <i data-lucide="file-plus"></i> New Filing
       </div>
-      <div class="card p-6 mb-6">
-        <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
-          <i data-lucide="refresh-cw"></i> Judge Assignment
-        </div>
-        <button id="assignJudgeBtn" class="btn-secondary py-2 px-4 rounded-lg">Auto-Assign Unassigned Cases</button>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=59417065#gid=59417065" target="_blank" class="btn-secondary text-center py-2 rounded-lg">📄 Case Filing</a>
+        <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1895005036#gid=1895005036" target="_blank" class="btn-secondary text-center py-2 rounded-lg">💍 Marriage</a>
+        <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1376146295#gid=1376146295" target="_blank" class="btn-secondary text-center py-2 rounded-lg">🚗 Property</a>
+        <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1538730298#gid=1538730298" target="_blank" class="btn-secondary text-center py-2 rounded-lg">🏢 Professional</a>
+        <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1478971826#gid=1478971826" target="_blank" class="btn-secondary text-center py-2 rounded-lg">👶 Paternity</a>
+        <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1874312862#gid=1874312862" target="_blank" class="btn-secondary text-center py-2 rounded-lg">📜 Will</a>
+        <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=318970083#gid=318970083" target="_blank" class="btn-secondary text-center py-2 rounded-lg">💰 Treasury</a>
+        <a href="${allFilingsSheetUrl}" target="_blank" class="btn-secondary text-center py-2 rounded-lg">📊 All Sheets</a>
       </div>
-      <div class="card p-6 mb-6">
-        <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
-          <i data-lucide="refresh-cw"></i> Recusal Queue
-        </div>
-        <button id="recusalQueueBtn" class="btn-secondary py-2 px-4 rounded-lg">View Queue</button>
+    </div>
+    
+    <!-- ✅ EXISTING: User Management -->
+    <div class="card p-6 mb-6">
+      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+        <i data-lucide="users"></i> User Management
       </div>
-      <div class="card p-6 mb-6">
-        <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
-          <i data-lucide="chart-line"></i> Audit Tools
-        </div>
-        <div class="flex flex-wrap gap-3">
-          <button id="financialAuditBtn" class="btn-secondary py-2 px-4 rounded-lg">Financial Summary</button>
-          <button id="offlineDuesBtn" class="btn-secondary py-2 px-4 rounded-lg">Offline Dues</button>
-          <a href="${allFilingsSheetUrl}" target="_blank" class="btn-secondary py-2 px-4 rounded-lg">Audit Log (All Filings)</a>
-          <!-- ✅ AUDIT TOOLS PLACEHOLDER BUTTONS -->
-          <button id="cleanupFilesBtn" class="btn-secondary py-2 px-4 rounded-lg opacity-75 cursor-not-allowed" title="Coming soon">🧹 Clean-up Files</button>
-          <button id="issueMarriageBtn" class="btn-secondary py-2 px-4 rounded-lg opacity-75 cursor-not-allowed" title="Coming soon">💒 Issue Marriage Certificates</button>
-        </div>
+      <button id="userMgmtBtn" class="btn-secondary py-2 px-4 rounded-lg">Manage Users</button>
+    </div>
+    
+    <!-- ✅ EXISTING: Judge Assignment -->
+    <div class="card p-6 mb-6">
+      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+        <i data-lucide="refresh-cw"></i> Judge Assignment
       </div>
-    `;
+      <button id="assignJudgeBtn" class="btn-secondary py-2 px-4 rounded-lg">Auto-Assign Unassigned Cases</button>
+    </div>
+    
+    <!-- ✅ EXISTING: Recusal Queue -->
+    <div class="card p-6 mb-6">
+      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+        <i data-lucide="refresh-cw"></i> Recusal Queue
+      </div>
+      <button id="recusalQueueBtn" class="btn-secondary py-2 px-4 rounded-lg">View Queue</button>
+    </div>
+    
+    <!-- ✅ EXISTING: Audit Tools -->
+    <div class="card p-6 mb-6">
+      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+        <i data-lucide="chart-line"></i> Audit Tools
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <button id="financialAuditBtn" class="btn-secondary py-2 px-4 rounded-lg">Financial Summary</button>
+        <button id="offlineDuesBtn" class="btn-secondary py-2 px-4 rounded-lg">Offline Dues</button>
+        <a href="${allFilingsSheetUrl}" target="_blank" class="btn-secondary py-2 px-4 rounded-lg">Audit Log (All Filings)</a>
+        <!-- ✅ AUDIT TOOLS PLACEHOLDER BUTTONS -->
+        <button id="cleanupFilesBtn" class="btn-secondary py-2 px-4 rounded-lg opacity-75 cursor-not-allowed" title="Coming soon">🧹 Clean-up Files</button>
+        <button id="issueMarriageBtn" class="btn-secondary py-2 px-4 rounded-lg opacity-75 cursor-not-allowed" title="Coming soon">💒 Issue Marriage Certificates</button>
+      </div>
+    </div>
+  `;
+}
   } else if (role === 'chief_justice') {
     roleSpecific = `
       <div class="card p-6 mb-6">
