@@ -10,8 +10,8 @@ const TIME_ZONE = "America/Chicago";
 const STORAGE_PREFIX = "ssrp_";
 
 // 🔗 Google Apps Script Web App URLs
-const API_URL = "https://script.google.com/macros/s/AKfycbz8vATgar6MSJ54TBYsUOxp_56Kj0Xz7kyNc3WvgrdlwTR01W1AMP4kwHleaal8gxp7Sw/exec";
-const PENAL_CODE_API_URL = "https://script.google.com/macros/s/AKfycbz8vATgar6MSJ54TBYsUOxp_56Kj0Xz7kyNc3WvgrdlwTR01W1AMP4kwHleaal8gxp7Sw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbytTfI7HlL_HK5aaEtYYoVvKiFYeH4jIX9snIGHfyaKyAdwSmpao28Y5jL1R450pj_nig/exec";
+const PENAL_CODE_API_URL = "https://script.google.com/macros/s/AKfycbytTfI7HlL_HK5aaEtYYoVvKiFYeH4jIX9snIGHfyaKyAdwSmpao28Y5jL1R450pj_nig/exec";
 
 // Google Sheets API Key
 const SHEETS_API_KEY = 'AIzaSyAjWST6rOH_rF9Hspvf0j3xI8xdUZ3moYk';
