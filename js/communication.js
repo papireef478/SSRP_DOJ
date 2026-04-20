@@ -3,10 +3,25 @@
 // ============================================================================
 async function fetchDOJUsersByRole(roleFilter) {
   try {
-    const url = `${API_URL}?action=getDOJUsers&role=${encodeURIComponent(roleFilter)}`;
+    // ✅ Handle special "clerk_or_admin" filter for combined Clerk/Admin dropdown
+    const actualRole = roleFilter === 'clerk_or_admin' ? 'clerk' : roleFilter;
+    const url = `${API_URL}?action=getDOJUsers&role=${encodeURIComponent(actualRole)}`;
     const response = await fetch(url);
     const result = await response.json();
-    return result.success ? result.users : [];
+    
+    let users = result.success ? result.users : [];
+    
+    // ✅ If filtering for clerk_or_admin, ALSO include admin/master_clerk users
+    if (roleFilter === 'clerk_or_admin') {
+      const adminUrl = `${API_URL}?action=getDOJUsers&role=admin`;
+      const adminResponse = await fetch(adminUrl);
+      const adminResult = await adminResponse.json();
+      if (adminResult.success) {
+        users = [...users, ...adminResult.users];
+      }
+    }
+    
+    return users;
   } catch (err) {
     console.error('Failed to fetch users:', err);
     return [];
@@ -196,6 +211,14 @@ function showCommunicationModal(targetRole, targetLabel) {
         recipientSelect.appendChild(option);
       });
     }
+    
+    // ✅ Add visual indicator for combined Clerk/Admin dropdown
+    if (targetRole === 'clerk_or_admin') {
+      const note = document.createElement('div');
+      note.className = 'text-xs text-gray-400 mt-1';
+      note.textContent = 'Includes all Clerks and Admins/Master Clerks';
+      recipientSelect.parentNode.appendChild(note);
+    }
   }).catch(err => {
     recipientSelect.innerHTML = `<option value="" disabled>❌ Error loading users</option>`;
     console.error('User fetch error:', err);
@@ -229,12 +252,13 @@ function setupSendMessageHandler(targetRole, targetLabel, isReplyMode) {
         .filter(url => url && url.startsWith('http'));
      
       // ✅ VALIDATION: Limit to 2 URLs max
-if (urlsArray.length > 2) {
-  alert('⚠️ Maximum 2 URL links allowed per message. Please remove excess links.');
-  sendBtn.disabled = false;
-  sendBtn.innerHTML = originalBtnText;
-  return;
-}     
+      if (urlsArray.length > 2) {
+        alert('⚠️ Maximum 2 URL links allowed per message. Please remove excess links.');
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = originalBtnText;
+        return;
+      }     
+      
       // Validation
       if (!currentUser?.name) {
         alert('⚠️ Please log in first to send messages.');
@@ -273,58 +297,57 @@ if (urlsArray.length > 2) {
       }
       
       // Success feedback
-// Success feedback
-let msg;
-if (isReplyMode) {
-  msg = `✅ Reply sent to ${recipient}.`;
-} else if (recipient === 'all') {
-  msg = `✅ Message sent to all ${targetLabel}s.`;
-} else {
-  msg = `✅ Message sent to ${recipient}.`;
-}
-alert(msg);
-
-closeModal('globalModal');
-
-// ✅ FIX 1: Add sent message to LOCAL notifications array immediately so sender sees it
-if (typeof dojNotifications !== 'undefined' && apiResponse?.thread_id) {
-  const sentNotif = {
-    id: Date.now(), // temporary local ID
-    thread_id: apiResponse.thread_id,
-    sender_name: currentUser.name,
-    recipient_name: recipient || targetLabel,
-    subject: subject || '',
-    text: `📨 Message sent to ${recipient || targetLabel}${subject ? ': ' + subject : ''}`,
-    message: body,
-    url: urlsArray[0] || '',
-    urls: urlsArray,
-    created_at: new Date().toISOString(),
-    read: true, // Mark as read since sender just sent it
-    expires_at: new Date(Date.now() + 14*24*60*60*1000).toISOString()
-  };
-  // Avoid duplicates
-  if (!dojNotifications.find(n => n.thread_id === apiResponse.thread_id)) {
-    dojNotifications.unshift(sentNotif);
-  }
-  // Re-render UI instantly
-  if (typeof updateNotificationBadge === 'function') updateNotificationBadge();
-  if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
-  if (typeof renderDojNotifications === 'function') renderDojNotifications();
-}
-
-// ✅ FIX 2: Use apiResponse (not undefined 'result') to open new thread
-if (!threadId && apiResponse?.thread_id) {
-  const partnerName = isReplyMode ? recipient : (recipient === 'all' ? targetLabel : recipient);
-  setTimeout(async () => {
-    if (typeof openThreadView === 'function') {
-      await openThreadView(apiResponse.thread_id, partnerName);
-    }
-  }, 300);
-} else {
-  if (currentUser?.name && typeof loadNotifications === 'function') {
-    await loadNotifications();
-  }
-}
+      let msg;
+      if (isReplyMode) {
+        msg = `✅ Reply sent to ${recipient}.`;
+      } else if (recipient === 'all') {
+        msg = `✅ Message sent to all ${targetLabel}s.`;
+      } else {
+        msg = `✅ Message sent to ${recipient}.`;
+      }
+      alert(msg);
+      
+      closeModal('globalModal');
+      
+      // ✅ FIX 1: Add sent message to LOCAL notifications array immediately so sender sees it
+      if (typeof dojNotifications !== 'undefined' && apiResponse?.thread_id) {
+        const sentNotif = {
+          id: Date.now(), // temporary local ID
+          thread_id: apiResponse.thread_id,
+          sender_name: currentUser.name,
+          recipient_name: recipient || targetLabel,
+          subject: subject || '',
+          text: `📨 Message sent to ${recipient || targetLabel}${subject ? ': ' + subject : ''}`,
+          message: body,
+          url: urlsArray[0] || '',
+          urls: urlsArray,
+          created_at: new Date().toISOString(),
+          read: true, // Mark as read since sender just sent it
+          expires_at: new Date(Date.now() + 14*24*60*60*1000).toISOString()
+        };
+        // Avoid duplicates
+        if (!dojNotifications.find(n => n.thread_id === apiResponse.thread_id)) {
+          dojNotifications.unshift(sentNotif);
+        }
+        // Re-render UI instantly
+        if (typeof updateNotificationBadge === 'function') updateNotificationBadge();
+        if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
+        if (typeof renderDojNotifications === 'function') renderDojNotifications();
+      }
+      
+      // ✅ FIX 2: Use apiResponse (not undefined 'result') to open new thread
+      if (!threadId && apiResponse?.thread_id) {
+        const partnerName = isReplyMode ? recipient : (recipient === 'all' ? targetLabel : recipient);
+        setTimeout(async () => {
+          if (typeof openThreadView === 'function') {
+            await openThreadView(apiResponse.thread_id, partnerName);
+          }
+        }, 300);
+      } else {
+        if (currentUser?.name && typeof loadNotifications === 'function') {
+          await loadNotifications();
+        }
+      }
       
     } catch (err) {
       console.error('Send error:', err);
@@ -341,8 +364,7 @@ if (!threadId && apiResponse?.thread_id) {
 // ============================================================================
 function initCommunicationButtons() {
   const buttonMap = {
-    'sendToClerkBtn': ['clerk', 'Clerk'],
-    'sendToMasterClerkBtn': ['admin', 'Master Clerk'],
+    'sendToClerkBtn': ['clerk_or_admin', 'Clerk/Admin'], // ✅ Combined Clerk/Admin for non-clerk roles
     'sendToDABtn': ['district_attorney', 'District Attorney'],
     'sendToCJBtn': ['chief_justice', 'Chief Justice'],
     'sendToPoliceBtn': ['police', 'Police']
@@ -357,24 +379,59 @@ function initCommunicationButtons() {
     }
   }
   
-  // ✅ "Send to All DOJ Roles" button - ONLY for authorized roles (Clerks, Master Clerks, CJ)
-  const sendToAllBtn = document.getElementById('sendToAllDOJBtn');
-  if (sendToAllBtn && ['clerk', 'admin', 'chief_justice'].includes(currentUser?.role)) {
-    sendToAllBtn.addEventListener('click', () => {
-      // Open modal with special handling for all_doj_roles broadcast
-      if (typeof showCommunicationModal === 'function') {
-        window.replyContext = { 
-          replyTo: 'all_doj_roles', 
-          threadId: null, 
-          subject: 'ANNOUNCEMENT', 
-          message: '' 
-        };
-        showCommunicationModal('any', 'All DOJ Roles');
-      }
-    });
-  } else if (sendToAllBtn) {
-    // Hide button for unauthorized roles
-    sendToAllBtn.style.display = 'none';
+  // ✅ Clerk/Admin/Master Clerk: Individual role buttons for ALL DOJ roles
+  if (currentUser?.role === 'clerk' || currentUser?.role === 'admin' || currentUser?.role === 'master_clerk') {
+    // Judge button
+    const judgeBtn = document.getElementById('sendToJudgeBtn');
+    if (judgeBtn) judgeBtn.addEventListener('click', () => showCommunicationModal('judge', 'Judge'));
+    
+    // Attorney button
+    const attyBtn = document.getElementById('sendToAttorneyBtn');
+    if (attyBtn) attyBtn.addEventListener('click', () => showCommunicationModal('attorney', 'Attorney'));
+    
+    // Public Defender button
+    const pdBtn = document.getElementById('sendToPDBtn');
+    if (pdBtn) pdBtn.addEventListener('click', () => showCommunicationModal('public_defender', 'Public Defender'));
+    
+    // DA button (already in buttonMap, but ensure it works for clerks)
+    const daBtn = document.getElementById('sendToDABtn');
+    if (daBtn) daBtn.addEventListener('click', () => showCommunicationModal('district_attorney', 'District Attorney'));
+    
+    // Bailiff button
+    const bailiffBtn = document.getElementById('sendToBailiffBtn');
+    if (bailiffBtn) bailiffBtn.addEventListener('click', () => showCommunicationModal('bailiff', 'Bailiff'));
+    
+    // Marshal button
+    const marshalBtn = document.getElementById('sendToMarshalBtn');
+    if (marshalBtn) marshalBtn.addEventListener('click', () => showCommunicationModal('marshal', 'Marshal'));
+    
+    // Reporter button
+    const reporterBtn = document.getElementById('sendToReporterBtn');
+    if (reporterBtn) reporterBtn.addEventListener('click', () => showCommunicationModal('reporter', 'Reporter'));
+    
+    // Police button (already in buttonMap, but ensure it works for clerks)
+    const policeBtn = document.getElementById('sendToPoliceBtn');
+    if (policeBtn) policeBtn.addEventListener('click', () => showCommunicationModal('police', 'Police'));
+    
+    // Chief Justice button (already in buttonMap, but ensure it works for clerks)
+    const cjBtn = document.getElementById('sendToCJBtn');
+    if (cjBtn) cjBtn.addEventListener('click', () => showCommunicationModal('chief_justice', 'Chief Justice'));
+    
+    // Send to All DOJ Roles button
+    const sendToAllBtn = document.getElementById('sendToAllDOJBtn');
+    if (sendToAllBtn) {
+      sendToAllBtn.addEventListener('click', () => {
+        if (typeof showCommunicationModal === 'function') {
+          window.replyContext = { 
+            replyTo: 'all_doj_roles', 
+            threadId: null, 
+            subject: 'ANNOUNCEMENT', 
+            message: '' 
+          };
+          showCommunicationModal('any', 'All DOJ Roles');
+        }
+      });
+    }
   }
 }
 
