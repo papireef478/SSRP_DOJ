@@ -13,6 +13,7 @@ function formatDateForDisplay(dateStr) {
     return dateStr;
   }
 }
+
 // ============================================
 // DASHBOARD - ALL ROLES WITH REAL API
 // ============================================
@@ -50,70 +51,66 @@ async function renderDashboardByRole() {
       ];
     }
   }
-  // Helper: Format ISO date to MM/DD/YYYY
-function formatDateForDisplay(dateStr) {
-  if (!dateStr) return '';
-  // Already in MM/DD/YYYY format
-  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) return dateStr;
-  try {
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return dateStr;
-    return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
-  } catch (e) {
-    return dateStr;
-  }
-}
-
-// Tasks HTML (for roles that have tasks) - with proper date formatting + null-safe data-id
-const rolesWithTasks = ['clerk', 'judge', 'attorney', 'public_defender', 'district_attorney', 'bailiff', 'marshal', 'reporter', 'admin', 'master_clerk', 'chief_justice'];
-const tasksHtml = rolesWithTasks.includes(role) ? `
-  <div class="card p-6 mb-6">
-    <div class="flex justify-between items-center mb-4">
-      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg">
-        <i data-lucide="check-square"></i> Daily Tasks
+  
+  // Tasks HTML (for roles that have tasks) - with proper date formatting + null-safe data-id
+  const rolesWithTasks = ['clerk', 'judge', 'attorney', 'public_defender', 'district_attorney', 'bailiff', 'marshal', 'reporter', 'admin', 'master_clerk', 'chief_justice'];
+  const tasksHtml = rolesWithTasks.includes(role) ? `
+    <div class="card p-6 mb-6">
+      <div class="flex justify-between items-center mb-4">
+        <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg">
+          <i data-lucide="check-square"></i> Daily Tasks
+        </div>
+        ${role === 'clerk' ? '<button id="refreshTasks" class="btn-secondary text-sm py-1 px-3 rounded-lg">Refresh</button>' : ''}
       </div>
-      ${role === 'clerk' ? '<button id="refreshTasks" class="btn-secondary text-sm py-1 px-3 rounded-lg">Refresh</button>' : ''}
+      <ul id="tasksList" class="space-y-2">
+        ${tasks.length > 0 ? tasks.map(task => {
+          // ✅ Ensure task.id exists and is valid number
+          const taskId = task.id != null && !isNaN(parseInt(task.id)) ? parseInt(task.id) : '';
+          // ✅ Format due_date properly
+          const dueDisplay = formatDateForDisplay(task.due_date || task.due || task.frequency || '');
+          return `
+            <li class="flex items-center gap-2">
+              <input type="checkbox" 
+                     ${task.status === 'done' ? 'checked' : ''} 
+                     data-id="${taskId}" 
+                     class="task-checkbox">
+              <span class="flex-1">${task.task || 'Unnamed task'}</span>
+              <span class="text-xs text-gray-500">${dueDisplay}</span>
+            </li>
+          `;
+        }).join('') : '<li class="text-gray-400 text-sm">No tasks assigned</li>'}
+      </ul>
     </div>
-    <ul id="tasksList" class="space-y-2">
-      ${tasks.length > 0 ? tasks.map(task => {
-        // ✅ Ensure task.id exists and is valid number
-        const taskId = task.id != null && !isNaN(parseInt(task.id)) ? parseInt(task.id) : '';
-        // ✅ Format due_date properly
-        const dueDisplay = formatDateForDisplay(task.due_date || task.due || task.frequency || '');
-        return `
-          <li class="flex items-center gap-2">
-            <input type="checkbox" 
-                   ${task.status === 'done' ? 'checked' : ''} 
-                   data-id="${taskId}" 
-                   class="task-checkbox">
-            <span class="flex-1">${task.task || 'Unnamed task'}</span>
-            <span class="text-xs text-gray-500">${dueDisplay}</span>
-          </li>
-        `;
-      }).join('') : '<li class="text-gray-400 text-sm">No tasks assigned</li>'}
-    </ul>
-  </div>
-` : '';
+  ` : '';
   
   // ✅ FIX: Notifications HTML - ADDED MISSING OPENING CARD DIV
   const notifHtml = `
-  <div class="card p-6 mb-6">
-    <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
-      <i data-lucide="bell"></i> DOJ Notifications
+    <div class="card p-6 mb-6">
+      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+        <i data-lucide="bell"></i> DOJ Notifications
+      </div>
+      <div id="dojNotificationsContainer">
+        <!-- Rendered by renderDojNotifications() -->
+      </div>
     </div>
-    <div id="dojNotificationsContainer">
-      <!-- Rendered by renderDojNotifications() -->
-    </div>
-  </div>
-`;
+  `;
   
-  // Communication buttons by role
+  // Communication buttons by role - ENHANCED for direct role messaging
   let commButtons = '';
-  if (role === 'clerk') {
+  
+  if (role === 'clerk' || role === 'admin' || role === 'master_clerk') {
+    // ✅ Clerk/Admin/Master Clerk: Can send to ANY individual DOJ role
     commButtons = `
-      <button id="sendToMasterClerkBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Master Clerk</button>
+      <button id="sendToJudgeBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Judge</button>
+      <button id="sendToAttorneyBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Attorney</button>
+      <button id="sendToPDBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Public Defender</button>
       <button id="sendToDABtn" class="btn-secondary py-2 px-4 rounded-lg">Send to DA</button>
+      <button id="sendToBailiffBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Bailiff</button>
+      <button id="sendToMarshalBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Marshal</button>
+      <button id="sendToReporterBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Reporter</button>
+      <button id="sendToPoliceBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Police</button>
       <button id="sendToCJBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Chief Justice</button>
+      <button id="sendToAllDOJBtn" class="btn-primary py-2 px-4 rounded-lg">🌐 Send to All DOJ Roles</button>
     `;
   } else if (role === 'judge' || role === 'attorney' || role === 'public_defender') {
     commButtons = `
@@ -124,21 +121,12 @@ const tasksHtml = rolesWithTasks.includes(role) ? `
   } else if (role === 'district_attorney') {
     commButtons = `
       <button id="sendToClerkBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Clerk</button>
-      <button id="sendToMasterClerkBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Master Clerk</button>
       <button id="sendToCJBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Chief Justice</button>
     `;
   } else if (role === 'bailiff' || role === 'marshal' || role === 'reporter') {
     commButtons = `
       <button id="sendToClerkBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Clerk</button>
       <button id="sendToCJBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Chief Justice</button>
-    `;
-  } else if (role === 'admin' || role === 'master_clerk' || role === 'chief_justice') {
-    // ✅ Admin/Master Clerk/CJ can send to ALL DOJ roles
-    commButtons = `
-      <button id="sendToClerkBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Clerk</button>
-      <button id="sendToDABtn" class="btn-secondary py-2 px-4 rounded-lg">Send to DA</button>
-      <button id="sendToCJBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Chief Justice</button>
-      <button id="sendToAllDOJBtn" class="btn-primary py-2 px-4 rounded-lg">🌐 Send to All DOJ Roles</button>
     `;
   } else if (role === 'police') {
     commButtons = `
@@ -153,14 +141,14 @@ const tasksHtml = rolesWithTasks.includes(role) ? `
   }
   
   // ✅ FIX: Communications HTML - ADDED MISSING OPENING CARD DIV
-const commHtml = `
-  <div class="card p-6 mb-6">
-    <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
-      <i data-lucide="message-square"></i> Communications
+  const commHtml = `
+    <div class="card p-6 mb-6">
+      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+        <i data-lucide="message-square"></i> Communications
+      </div>
+      <div class="flex flex-wrap gap-3">${commButtons}</div>
     </div>
-    <div class="flex flex-wrap gap-3">${commButtons}</div>
-  </div>
-`;
+  `;
   
   // Role-specific content
   let roleSpecific = '';
@@ -455,8 +443,9 @@ function attachDashboardEventListeners(role) {
               <li class="flex items-center gap-2">
                 <input type="checkbox" ${task.status === 'done' ? 'checked' : ''} data-id="${task.id}" class="task-checkbox">
                 <span class="flex-1">${task.task}</span>
-               <span class="text-xs text-gray-500">
-  ${formatDateForDisplay(task.due_date || task.due || task.frequency || '')}</span>
+                <span class="text-xs text-gray-500">
+                  ${formatDateForDisplay(task.due_date || task.due || task.frequency || '')}
+                </span>
               </li>
             `).join('');
           }
@@ -469,36 +458,84 @@ function attachDashboardEventListeners(role) {
     }
   });
   
-// Task checkboxes (clerk/admin/master_clerk) - with strict ID validation
-document.querySelectorAll('.task-checkbox')?.forEach(cb => {
-  cb.addEventListener('change', async () => {
-    if (role === 'clerk' || role === 'admin' || role === 'master_clerk') {
-      const taskId = cb.dataset.id;
-      
-      // ✅ Skip if no valid task ID
-      if (!taskId || taskId.trim() === '' || isNaN(parseInt(taskId))) {
-        console.warn('Invalid or missing task ID:', taskId);
-        cb.checked = !cb.checked; // Revert UI
-        return;
+  // Task checkboxes (clerk/admin/master_clerk) - with strict ID validation
+  document.querySelectorAll('.task-checkbox')?.forEach(cb => {
+    cb.addEventListener('change', async () => {
+      if (role === 'clerk' || role === 'admin' || role === 'master_clerk') {
+        const taskId = cb.dataset.id;
+        
+        // ✅ Skip if no valid task ID
+        if (!taskId || taskId.trim() === '' || isNaN(parseInt(taskId))) {
+          console.warn('Invalid or missing task ID:', taskId);
+          cb.checked = !cb.checked; // Revert UI
+          return;
+        }
+        
+        try {
+          await apiCall('updateClerkTask', {
+            id: parseInt(taskId, 10),
+            status: cb.checked ? 'done' : 'pending',
+            completed_by: currentUser.name
+          });
+          // ✅ Keep checkbox state as-is (no re-render flicker)
+        } catch (err) {
+          console.error('Failed to update task:', err);
+          // Revert checkbox on error
+          cb.checked = !cb.checked;
+          alert('❌ Failed to save task: ' + (err.message || 'Please check your connection and try again.'));
+        }
       }
-      
-      try {
-        // ✅ FIX: Wrap params in 'data' object so backend receives them correctly
-await apiCall('updateClerkTask', {
-  id: parseInt(taskId, 10),
-  status: cb.checked ? 'done' : 'pending',
-  completed_by: currentUser.name
-});
-        // ✅ Keep checkbox state as-is (no re-render flicker)
-      } catch (err) {
-        console.error('Failed to update task:', err);
-        // Revert checkbox on error
-        cb.checked = !cb.checked;
-        alert('❌ Failed to save task: ' + (err.message || 'Please check your connection and try again.'));
-      }
-    }
+    });
   });
-});
+  
+  // ✅ NEW: Direct role messaging buttons (for Clerk/Admin/Master Clerk only)
+  if (role === 'clerk' || role === 'admin' || role === 'master_clerk') {
+    document.getElementById('sendToJudgeBtn')?.addEventListener('click', () => {
+      if (typeof showCommunicationModal === 'function') showCommunicationModal('judge', 'Judge');
+    });
+    document.getElementById('sendToAttorneyBtn')?.addEventListener('click', () => {
+      if (typeof showCommunicationModal === 'function') showCommunicationModal('attorney', 'Attorney');
+    });
+    document.getElementById('sendToPDBtn')?.addEventListener('click', () => {
+      if (typeof showCommunicationModal === 'function') showCommunicationModal('public_defender', 'Public Defender');
+    });
+    document.getElementById('sendToDABtn')?.addEventListener('click', () => {
+      if (typeof showCommunicationModal === 'function') showCommunicationModal('district_attorney', 'District Attorney');
+    });
+    document.getElementById('sendToBailiffBtn')?.addEventListener('click', () => {
+      if (typeof showCommunicationModal === 'function') showCommunicationModal('bailiff', 'Bailiff');
+    });
+    document.getElementById('sendToMarshalBtn')?.addEventListener('click', () => {
+      if (typeof showCommunicationModal === 'function') showCommunicationModal('marshal', 'Marshal');
+    });
+    document.getElementById('sendToReporterBtn')?.addEventListener('click', () => {
+      if (typeof showCommunicationModal === 'function') showCommunicationModal('reporter', 'Reporter');
+    });
+    document.getElementById('sendToPoliceBtn')?.addEventListener('click', () => {
+      if (typeof showCommunicationModal === 'function') showCommunicationModal('police', 'Police');
+    });
+    document.getElementById('sendToCJBtn')?.addEventListener('click', () => {
+      if (typeof showCommunicationModal === 'function') showCommunicationModal('chief_justice', 'Chief Justice');
+    });
+    document.getElementById('sendToAllDOJBtn')?.addEventListener('click', () => {
+      if (typeof showCommunicationModal === 'function') showCommunicationModal('all_doj_roles', 'All DOJ Roles');
+    });
+  } else {
+    // ✅ For other roles: "Send to Clerk" button includes BOTH clerk AND admin roles
+    document.getElementById('sendToClerkBtn')?.addEventListener('click', () => {
+      if (typeof showCommunicationModal === 'function') {
+        // ✅ Pass special flag to include both clerk AND admin/master_clerk users
+        showCommunicationModal('clerk_or_admin', 'Clerk/Admin');
+      }
+    });
+    document.getElementById('sendToDABtn')?.addEventListener('click', () => {
+      if (typeof showCommunicationModal === 'function') showCommunicationModal('district_attorney', 'District Attorney');
+    });
+    document.getElementById('sendToCJBtn')?.addEventListener('click', () => {
+      if (typeof showCommunicationModal === 'function') showCommunicationModal('chief_justice', 'Chief Justice');
+    });
+  }
+  
   // Role-specific buttons
   if (role === 'judge') {
     document.getElementById('recusalBtn')?.addEventListener('click', () => {
@@ -594,41 +631,6 @@ await apiCall('updateClerkTask', {
       alert('💒 Issue Marriage Certificates feature coming soon!\n\nThis will generate and send official marriage certificates.');
     });
   }
-  
-  // Communication buttons (all roles)
-  document.getElementById('sendToClerkBtn')?.addEventListener('click', () => {
-    if (typeof showCommunicationModal === 'function') {
-      showCommunicationModal('clerk', 'Clerk');
-    }
-  });
-  document.getElementById('sendToMasterClerkBtn')?.addEventListener('click', () => {
-    if (typeof showCommunicationModal === 'function') {
-      showCommunicationModal('admin', 'Master Clerk');
-    }
-  });
-  document.getElementById('sendToDABtn')?.addEventListener('click', () => {
-    if (typeof showCommunicationModal === 'function') {
-      showCommunicationModal('district_attorney', 'District Attorney');
-    }
-  });
-  document.getElementById('sendToCJBtn')?.addEventListener('click', () => {
-    if (typeof showCommunicationModal === 'function') {
-      showCommunicationModal('chief_justice', 'Chief Justice');
-    }
-  });
-  document.getElementById('sendToPoliceBtn')?.addEventListener('click', () => {
-    if (typeof showCommunicationModal === 'function') {
-      showCommunicationModal('police', 'Police');
-    }
-  });
-  
-  // ✅ NEW: "Send to All DOJ Roles" button (admin/master_clerk/CJ only)
-  document.getElementById('sendToAllDOJBtn')?.addEventListener('click', () => {
-    if (typeof showCommunicationModal === 'function') {
-      // Open modal with special "all_doj_roles" option
-      showCommunicationModal('all_doj_roles', 'All DOJ Roles');
-    }
-  });
   
   // Training button
   document.getElementById('trainingBtn')?.addEventListener('click', () => {
@@ -851,3 +853,4 @@ window.serveWarrant = serveWarrant;
 window.reportManhunt = reportManhunt;
 window.submitSecurityReport = submitSecurityReport;
 window.showTrainingModal = showTrainingModal;
+window.formatDateForDisplay = formatDateForDisplay;
