@@ -157,9 +157,6 @@ function renderNotificationPanel() {
                         class="text-[10px] text-[#c9a227] hover:text-[#facc15] px-1 py-0.5 rounded transition"
                         title="Mark as read">✓</button>
               ` : ''}
-              <button onclick="replyToNotification('${senderName}', '${threadId}'); event.stopPropagation();" 
-                      class="text-[10px] text-blue-400 hover:text-blue-300 px-1 py-0.5 rounded transition"
-                      title="Reply">↩</button>
               <button onclick="deleteNotification(${n.id}); event.stopPropagation();" 
                       class="text-[10px] text-red-400 hover:text-red-300 px-1 py-0.5 rounded transition"
                       title="Delete">✕</button>
@@ -256,9 +253,6 @@ function renderDojNotifications() {
         
         ${!isAnnouncement && !isExpired ? `
           <div class="flex gap-1 ml-2 flex-shrink-0" onclick="event.stopPropagation()">
-            <button onclick="replyToNotification('${senderName}', '${threadId}'); event.stopPropagation();" 
-                    class="text-[10px] text-blue-400 hover:text-blue-300 px-1 py-0.5 rounded transition"
-                    title="Reply">↩</button>
             <button onclick="deleteNotification(${n.id}); event.stopPropagation();" 
                     class="text-[10px] text-red-400 hover:text-red-300 px-1 py-0.5 rounded transition"
                     title="Delete">✕</button>
@@ -422,7 +416,7 @@ const messageContent = renderMessageWithLinks(m.message, m.urls || m.url);
               <span class="text-xs font-medium ${isCurrentUser ? 'text-[#c9a227]' : 'text-gray-300'}">${m.sender_name}</span>
               <span class="text-[10px] text-gray-500">${timestamp}</span>
             </div>
-            <p class="text-sm text-white whitespace-pre-wrap">${m.message}${urlsDisplay}</p>
+            <p class="text-sm text-white whitespace-pre-wrap">${messageContent}</p>
           </div>
         </div>
       `;
