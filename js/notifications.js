@@ -1,6 +1,8 @@
 // ============================================================================
 // NOTIFICATIONS SYSTEM - ENHANCED WITH ACTIONS & VISUAL INDICATORS
 // ============================================================================
+// NOTE: dojNotifications is declared in config.js - DO NOT redeclare here!
+
 // ============================================================================
 // 🔹 HELPER: Safely parse & render message with clickable hyperlinks
 // ============================================================================
@@ -76,16 +78,25 @@ function groupNotificationsByThread(notifications) {
 
 // ============================================================================
 // 🔹 HELPER: Build clean display text based on read status
-// ✅ New unread: "📨 New message: Subject"
-// ✅ Read: "Subject" (just the subject, no prefix)
+// ✅ New unread received: "📨 New message: Subject"
+// ✅ Read received: "Subject" (just the subject, no prefix)
+// ✅ Sent messages: Don't show in notifications panel (or show as "Sent: Subject")
 // ============================================================================
-function buildNotificationDisplayText(n) {
+function buildNotificationDisplayText(n, currentUser) {
   const isUnread = !n.read;
-  const subject = n.text || n.subject || 'No subject';  // Backend stores just subject in n.text
+  const isSender = n.sender_name === currentUser?.name;
+  const subject = n.text || n.subject || 'No subject';
   
   // ✅ Clean format per requirements:
-  // - Unread: "📨 New message: Welcome Harmony!"
-  // - Read: "Welcome Harmony!"
+  // - Receiver (unread): "📨 New message: Welcome Harmony!"
+  // - Receiver (read): "Welcome Harmony!"
+  // - Sender: Don't show in notifications, or show as "Sent: Welcome Harmony!"
+  
+  if (isSender) {
+    // Optional: Show sent messages differently or hide them
+    return `Sent: ${subject}`;
+  }
+  
   return isUnread 
     ? `📨 New message: ${subject}` 
     : `${subject}`;
@@ -133,7 +144,7 @@ async function loadNotifications() {
 
 // ============================================================================
 // 🔹 UPDATE NOTIFICATION BADGE COUNT
-// ✅ Only counts unread notifications (new messages)
+// ✅ Only counts unread *received* messages (not sent by current user)
 // ============================================================================
 function updateNotificationBadge() {
   const badge = document.getElementById('notifBadge');
@@ -141,7 +152,8 @@ function updateNotificationBadge() {
   
   const unread = dojNotifications.filter(n => {
     const isRead = typeof n.read === 'boolean' ? n.read : String(n.read).toUpperCase() === 'TRUE';
-    return !isRead;
+    const isReceived = n.sender_name !== currentUser?.name; // Only count messages received (not sent)
+    return !isRead && isReceived;
   }).length;
   
   if (unread > 0) {
@@ -173,10 +185,15 @@ function renderNotificationPanel() {
     const isAnnouncement = n.subject === 'ANNOUNCEMENT';
     
     // ✅ Build clean display text: "📨 New message: Subject" or "Subject"
-    const displayText = buildNotificationDisplayText(n);
+    const displayText = buildNotificationDisplayText(n, currentUser);
     
     // Build thread_id: prefer real thread_id, fallback to msg_+id
     const threadId = n.thread_id || ('msg_' + n.id);
+    
+    // ✅ Hide sent messages from notification panel (optional - remove this if you want to show them)
+    if (n.sender_name === currentUser?.name) {
+      return ''; // Skip rendering sent messages in panel
+    }
     
     return `
       <div class="p-3 border-b border-gray-700 hover:bg-gray-700/50 cursor-pointer transition relative ${isUnread ? 'bg-[#c9a227]/10' : ''} ${isExpired ? 'opacity-50' : ''}" 
@@ -213,9 +230,9 @@ function renderNotificationPanel() {
         </div>
       </div>
     `;
-  }).join('');
+  }).filter(html => html).join(''); // Filter out empty strings from skipped sent messages
   
-  // ✅ Click handler: Auto-mark as read + update badge INSTANTLY
+  // ✅ Click handler: Mark read + update UI INSTANTLY + sync to backend
   list.querySelectorAll('[data-id]').forEach(el => {
     el.addEventListener('click', (e) => {
       if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
@@ -223,25 +240,25 @@ function renderNotificationPanel() {
       const id = parseInt(el.dataset.id);
       const threadId = el.dataset.threadId;
       
-      // ✅ AUTO-MARK AS READ when user clicks to open
+      // ✅ 1. Update LOCAL state FIRST (instant UI feedback)
       const notif = dojNotifications.find(n => n.id === id);
       if (notif && !notif.read) {
-        notif.read = true;  // ✅ Update local state FIRST
-        updateNotificationBadge();  // ✅ Update badge INSTANTLY
-        renderNotificationPanel();  // ✅ Re-render panel
-        renderDojNotifications();  // ✅ Update dashboard
+        notif.read = true;  // ✅ Mark read locally
+        updateNotificationBadge();  // ✅ Update badge instantly
+        renderNotificationPanel();  // ✅ Re-render panel instantly
+        renderDojNotifications();  // ✅ Update dashboard instantly
         
-        // Sync to backend (fire-and-forget)
+        // ✅ 2. Sync to backend (fire-and-forget)
         apiCall('markNotificationRead', { id }).catch(err => {
-          console.error('Failed to sync read:', err);
-          // Revert if sync fails
+          console.error('Failed to sync read status:', err);
+          // ✅ Revert local state if sync fails
           notif.read = false;
           updateNotificationBadge();
           renderNotificationPanel();
         });
       }
       
-      // Open thread view for reading
+      // ✅ 3. Open thread view
       if (threadId) {
         openThreadView(threadId);
       }
@@ -251,13 +268,16 @@ function renderNotificationPanel() {
 
 // ============================================================================
 // 🔹 RENDER NOTIFICATIONS IN DASHBOARD (LATEST 5)
-// ✅ Same clean text format
+// ✅ Same clean text format, hide sent messages
 // ============================================================================
 function renderDojNotifications() {
   const container = document.getElementById('dojNotificationsContainer');
   if (!container) return;
   
-  const notifs = dojNotifications.slice(0, 5);
+  // ✅ Filter out sent messages and take latest 5 received
+  const notifs = dojNotifications
+    .filter(n => n.sender_name !== currentUser?.name) // Hide sent messages
+    .slice(0, 5);
   
   if (notifs.length === 0) {
     container.innerHTML = '<div class="text-gray-400 text-sm text-center py-4">No recent notifications</div>';
@@ -270,7 +290,7 @@ function renderDojNotifications() {
     const isAnnouncement = n.subject === 'ANNOUNCEMENT';
     
     // ✅ Build clean display text
-    const displayText = buildNotificationDisplayText(n);
+    const displayText = buildNotificationDisplayText(n, currentUser);
     
     const threadId = n.thread_id || ('msg_' + n.id);
     
@@ -392,10 +412,26 @@ async function sendNotificationToRole(role, message) {
 
 // ============================================================================
 // 🔹 OPEN THREAD VIEW MODAL
-// ✅ Shows URLs, preserves subject, marks read on close
+// ✅ Shows URLs, preserves subject, marks read on open (like Gmail)
 // ============================================================================
 async function openThreadView(threadId) {
   if (!threadId) return;
+  
+  // ✅ MARK AS READ IMMEDIATELY WHEN MODAL OPENS (like Gmail/Outlook)
+  const notif = dojNotifications.find(n => n.thread_id === threadId);
+  if (notif && !notif.read) {
+    notif.read = true;
+    updateNotificationBadge();
+    renderNotificationPanel();
+    renderDojNotifications();
+    // Sync to backend (fire-and-forget)
+    apiCall('markNotificationRead', { id: notif.id }).catch(err => {
+      console.error('Failed to sync read on open:', err);
+      notif.read = false;
+      updateNotificationBadge();
+      renderNotificationPanel();
+    });
+  }
   
   showModal(`
     <div class="flex justify-between items-center mb-4">
