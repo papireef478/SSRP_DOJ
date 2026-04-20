@@ -260,33 +260,57 @@ function setupSendMessageHandler(targetRole, targetLabel, isReplyMode) {
       }
       
       // Success feedback
-      let msg;
-      if (isReplyMode) {
-        msg = `✅ Reply sent to ${recipient}.`;
-      } else if (recipient === 'all') {
-        msg = `✅ Message sent to all ${targetLabel}s.`;
-      } else {
-        msg = `✅ Message sent to ${recipient}.`;
-      }
-      alert(msg);
-      
-      closeModal('globalModal');
-      
-      // ✅ FIX: Use apiResponse (not 'result') to open new thread
-      if (!threadId && apiResponse?.thread_id) {
-        const partnerName = isReplyMode ? recipient : 
-                           (recipient === 'all' ? targetLabel : recipient);
-        
-        setTimeout(async () => {
-          if (typeof openThreadView === 'function') {
-            await openThreadView(apiResponse.thread_id, partnerName);
-          }
-        }, 300);
-      } else {
-        if (currentUser?.name && typeof loadNotifications === 'function') {
-          await loadNotifications();
-        }
-      }
+// Success feedback
+let msg;
+if (isReplyMode) {
+  msg = `✅ Reply sent to ${recipient}.`;
+} else if (recipient === 'all') {
+  msg = `✅ Message sent to all ${targetLabel}s.`;
+} else {
+  msg = `✅ Message sent to ${recipient}.`;
+}
+alert(msg);
+
+closeModal('globalModal');
+
+// ✅ FIX 1: Add sent message to local notifications IMMEDIATELY so sender sees it
+if (typeof dojNotifications !== 'undefined' && apiResponse?.thread_id) {
+  const sentNotif = {
+    id: Date.now(), // temporary local ID
+    thread_id: apiResponse.thread_id,
+    sender_name: currentUser.name,
+    recipient_name: recipient || targetLabel,
+    subject: subject || '',
+    text: `📨 Message sent to ${recipient || targetLabel}${subject ? ': ' + subject : ''}`,
+    message: body,
+    url: urlsArray[0] || '',
+    urls: urlsArray,
+    created_at: new Date().toISOString(),
+    read: true,
+    expires_at: new Date(Date.now() + 14*24*60*60*1000).toISOString()
+  };
+  // Avoid duplicates if same thread exists
+  if (!dojNotifications.find(n => n.thread_id === apiResponse.thread_id)) {
+    dojNotifications.unshift(sentNotif);
+  }
+  renderNotificationPanel();
+  renderDojNotifications();
+  updateNotificationBadge();
+}
+
+// ✅ FIX 2: Use apiResponse (not undefined 'result') to open new thread
+if (!threadId && apiResponse?.thread_id) {
+  const partnerName = isReplyMode ? recipient : (recipient === 'all' ? targetLabel : recipient);
+  setTimeout(async () => {
+    if (typeof openThreadView === 'function') {
+      await openThreadView(apiResponse.thread_id, partnerName);
+    }
+  }, 300);
+} else {
+  if (currentUser?.name && typeof loadNotifications === 'function') {
+    await loadNotifications();
+  }
+}
       
     } catch (err) {
       console.error('Send error:', err);
