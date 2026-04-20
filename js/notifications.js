@@ -36,7 +36,8 @@ function renderMessageWithLinks(messageText, urlsParam) {
     uniqueUrls.forEach(url => {
       const safeUrl = url.startsWith('http') ? url : `https://${url}`;
       const displayText = url.length > 40 ? url.substring(0, 37) + '...' : url;
-      html += `<br><a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener" class="msg-link">🔗 ${escapeHtml(displayText)}</a>`;
+      // ✅ FIX: Render URL as separate clickable bubble/link below message
+      html += `<br><a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer" class="msg-link">🔗 ${escapeHtml(displayText)}</a>`;
     });
   }
   
@@ -74,16 +75,19 @@ function groupNotificationsByThread(notifications) {
 }
 
 // ============================================================================
-// 🔹 HELPER: Build display text with conditional "New"/"From" prefix
+// 🔹 HELPER: Build display text with conditional "New"/"Regarding" prefix
 // ============================================================================
 function buildNotificationDisplayText(n) {
   const isUnread = !n.read;
   const senderName = n.sender_name || 'Unknown';
+  const subject = n.text || n.subject || 'No subject';  // ✅ Backend stores just subject in n.text
   
-  // ✅ Backend sends clean text; frontend adds "New" prefix only for unread
+  // ✅ FIX: Frontend adds prefix based on read status
+  // Unread: "📨 New message regarding: [subject]"
+  // Read: "📨 Message regarding: [subject]"
   return isUnread 
-    ? `📨 New message from ${senderName}` 
-    : `📨 Message from ${senderName}`;
+    ? `📨 New message regarding: ${subject}` 
+    : `📨 Message regarding: ${subject}`;
 }
 
 // ============================================================================
@@ -165,10 +169,10 @@ function renderNotificationPanel() {
     const isExpired = n.expires_at && new Date(n.expires_at) < new Date();
     const isAnnouncement = n.subject === 'ANNOUNCEMENT';
     
-    // Use sender_name from metadata (not parsed from text)
+    // ✅ Use sender_name from metadata (not parsed from text)
     const senderName = n.sender_name || 'Unknown';
     
-    // ✅ Build display text with conditional "New"/"From" prefix
+    // ✅ Build display text with conditional "New"/"Regarding" prefix
     const displayText = buildNotificationDisplayText(n);
     
     // Build thread_id: prefer real thread_id, fallback to msg_+id
@@ -212,7 +216,7 @@ function renderNotificationPanel() {
     `;
   }).join('');
   
-  // Click handler: AUTO-MARK AS READ when clicked + open thread view
+  // Click handler: ✅ AUTO-MARK AS READ when clicked + open thread view
   list.querySelectorAll('[data-id]').forEach(el => {
     el.addEventListener('click', (e) => {
       if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
@@ -263,7 +267,7 @@ function renderDojNotifications() {
     // Use sender_name from metadata
     const senderName = n.sender_name || 'Unknown';
     
-    // ✅ Build display text with conditional "New"/"From" prefix
+    // ✅ Build display text with conditional "New"/"Regarding" prefix
     const displayText = buildNotificationDisplayText(n);
     
     const threadId = n.thread_id || ('msg_' + n.id);
@@ -397,7 +401,7 @@ async function openThreadView(threadId, otherUser = '') {
   showModal(`
     <div class="flex justify-between items-center mb-4">
       <h3 class="text-xl font-bold text-white">💬 Loading conversation...</h3>
-      <button onclick="closeModal('globalModal')" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+      <button id="closeThreadModal" class="text-gray-400 hover:text-white text-2xl">&times;</button>
     </div>
     <div class="flex justify-center py-8">
       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#c9a227]"></div>
@@ -418,7 +422,7 @@ async function openThreadView(threadId, otherUser = '') {
         showModal(`
           <div class="flex justify-between items-center mb-4">
             <h3 class="text-xl font-bold text-white">💬 Message Details</h3>
-            <button onclick="closeModal('globalModal')" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            <button id="closeThreadModal" class="text-gray-400 hover:text-white text-2xl">&times;</button>
           </div>
           <div class="p-3 bg-gray-700/50 rounded-lg mb-4">
             <p class="text-sm text-white whitespace-pre-wrap">${notif.text || notif.message}</p>
@@ -427,14 +431,14 @@ async function openThreadView(threadId, otherUser = '') {
           </div>
           <div class="flex justify-end gap-2">
             <button onclick="replyToNotification('${notif.sender_name || 'Unknown'}', '${threadId}')" class="btn-primary py-2 px-4 rounded-lg">↩ Reply</button>
-            <button onclick="closeModal('globalModal')" class="btn-secondary py-2 px-4 rounded-lg">Close</button>
+            <button id="closeThreadModal" class="btn-secondary py-2 px-4 rounded-lg">Close</button>
           </div>
         `);
       } else {
         showModal(`
           <div class="flex justify-between items-center mb-4">
             <h3 class="text-xl font-bold text-white">💬 Conversation</h3>
-            <button onclick="closeModal('globalModal')" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            <button id="closeThreadModal" class="text-gray-400 hover:text-white text-2xl">&times;</button>
           </div>
           <div class="text-center text-gray-400 py-8">No messages found in this conversation.</div>
         `);
@@ -445,12 +449,12 @@ async function openThreadView(threadId, otherUser = '') {
     const conversationPartner = otherUser || messages.find(m => m.sender_name !== currentUser.name)?.sender_name || 'Unknown';
     const subjectDisplay = messages[0]?.subject ? `<span class="text-gray-400 font-normal">• ${messages[0].subject}</span>` : '';
     
-    // ✅ Build conversation HTML - show URLs for ALL messages
+    // ✅ Build conversation HTML - show URLs for ALL messages using helper
     const conversationHtml = messages.map(m => {
       const isCurrentUser = m.sender_name === currentUser.name;
       const timestamp = new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
       
-      // Use helper to render message with clickable URLs
+      // ✅ Use helper to render message with clickable URLs as separate bubbles
       const messageContent = renderMessageWithLinks(m.message, m.urls || m.url);
       
       return `
@@ -472,7 +476,7 @@ async function openThreadView(threadId, otherUser = '') {
     showModal(`
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-xl font-bold text-white">💬 Conversation with ${conversationPartner} ${subjectDisplay}</h3>
-        <button onclick="closeModal('globalModal')" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+        <button id="closeThreadModal" class="text-gray-400 hover:text-white text-2xl">&times;</button>
       </div>
       
       <div id="threadMessages" class="space-y-2 max-h-80 overflow-y-auto mb-4 p-2 bg-gray-900 rounded-lg border border-gray-700">
@@ -491,6 +495,23 @@ async function openThreadView(threadId, otherUser = '') {
     
     const messagesContainer = document.getElementById('threadMessages');
     if (messagesContainer) messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    // ✅ FIX: Auto-mark as read when modal closes (via X button)
+    const closeBtn = document.getElementById('closeThreadModal');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        closeModal('globalModal');
+        // ✅ Mark notification as read when closing modal
+        const notif = dojNotifications.find(n => n.thread_id === threadId);
+        if (notif && !notif.read) {
+          notif.read = true;
+          updateNotificationBadge();
+          renderNotificationPanel();
+          renderDojNotifications();
+          apiCall('markNotificationRead', { id: notif.id }).catch(err => console.error('Failed to sync read:', err));
+        }
+      });
+    }
     
     if (!isAnnouncement) {
       document.getElementById('sendThreadReply')?.addEventListener('click', async () => {
@@ -535,13 +556,12 @@ async function openThreadView(threadId, otherUser = '') {
     showModal(`
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-xl font-bold text-white">💬 Error</h3>
-        <button onclick="closeModal('globalModal')" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+        <button id="closeThreadModal" class="text-gray-400 hover:text-white text-2xl">&times;</button>
       </div>
       <div class="text-center text-red-400 py-8">Could not load conversation.<br><span class="text-xs text-gray-500">${err.message || 'Unknown error'}</span></div>
     `);
   }
 }
-
 // ============================================================================
 // 🔹 QUICK REPLY FROM THREAD VIEW
 // ============================================================================
