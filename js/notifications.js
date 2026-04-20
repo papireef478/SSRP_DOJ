@@ -1,11 +1,6 @@
 // ============================================================================
 // NOTIFICATIONS SYSTEM - ENHANCED WITH ACTIONS & VISUAL INDICATORS
 // ============================================================================
-// NOTE: dojNotifications is declared in config.js - DO NOT redeclare here!
-
-/**
- * Load notifications from API for current user
- */
 // ============================================================================
 // 🔹 HELPER: Safely parse & render message with clickable hyperlinks
 // ============================================================================
@@ -42,6 +37,7 @@ function renderMessageWithLinks(messageText, urlsParam) {
       html += `<br><a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener" class="msg-link">🔗 ${escapeHtml(displayText)}</a>`;
     });
   }
+  
   return html;
 }
 
@@ -50,21 +46,25 @@ async function loadNotifications() {
   
   const container = document.getElementById('dojNotificationsContainer');
   if (container) {
-    container.innerHTML = '<div class="text-center py-4"><span class="animate-spin mr-2">⏳</span>Loading notifications...</div>';
+    container.innerHTML = '⏳ Loading notifications...';
   }
   
   try {
     const result = await apiCall('getNotifications', { user_name: currentUser.name });
     
+    // Clear and replace notifications
     dojNotifications.length = 0;
     dojNotifications.push(...(result.notifications || []));
     
-    // Convert read field from string to boolean
+    // Convert read field from string to boolean AND group by thread
     dojNotifications.forEach(n => {
       if (typeof n.read === 'string') {
         n.read = n.read.toUpperCase() === 'TRUE';
       }
     });
+    
+    // ✅ FIX: Group notifications by thread_id to avoid duplicates
+    dojNotifications = groupNotificationsByThread(dojNotifications);
     
     updateNotificationBadge();
     renderNotificationPanel();
@@ -73,14 +73,42 @@ async function loadNotifications() {
   } catch (err) {
     console.error('Failed to load notifications:', err);
     if (container) {
-      container.innerHTML = '<div class="text-red-400 text-sm text-center py-4">Error loading notifications</div>';
+      container.innerHTML = '❌ Error loading notifications';
     }
   }
 }
 
+// ✅ NEW HELPER: Group notifications by thread to avoid duplicates
+function groupNotificationsByThread(notifications) {
+  const threadMap = new Map();
+  
+  notifications.forEach(n => {
+    const threadId = n.thread_id || ('msg_' + n.id);
+    
+    if (threadMap.has(threadId)) {
+      // Keep the most recent version of this thread
+      const existing = threadMap.get(threadId);
+      const newDate = new Date(n.created_at);
+      const existingDate = new Date(existing.created_at);
+      
+      if (newDate > existingDate) {
+        // Update with newer message but preserve read status if already read
+        n.read = existing.read || n.read;
+        threadMap.set(threadId, n);
+      }
+    } else {
+      threadMap.set(threadId, n);
+    }
+  });
+  
+  return Array.from(threadMap.values()).sort((a, b) => 
+    new Date(b.created_at) - new Date(a.created_at)
+  );
+}
+
 /**
- * Update notification badge count with visual pulse for new messages
- */
+Update notification badge count with visual pulse for new messages
+*/
 function updateNotificationBadge() {
   const badge = document.getElementById('notifBadge');
   if (!badge) return;
@@ -101,43 +129,45 @@ function updateNotificationBadge() {
 }
 
 /**
- * Render notification dropdown panel with action buttons
- */
+Render notification dropdown panel with action buttons
+*/
 function renderNotificationPanel() {
   const list = document.getElementById('notifList');
   if (!list) return;
   
   if (dojNotifications.length === 0) {
-    list.innerHTML = '<div class="p-4 text-gray-400 text-center">No notifications</div>';
+    list.innerHTML = '<div class="p-3 text-gray-400 text-center">No notifications</div>';
     return;
   }
   
   list.innerHTML = dojNotifications.map(n => {
     const isUnread = !n.read;
     const isExpired = n.expires_at && new Date(n.expires_at) < new Date();
-    const isAnnouncement = n.text?.includes('📨 New message from') && n.subject === 'ANNOUNCEMENT';
+    const isAnnouncement = n.subject === 'ANNOUNCEMENT';
     
-    // Extract sender name - handles both "New message from" and "Message from"
+    // Extract sender name from text if not available in sender_name field
     const senderMatch = n.text?.match(/(?:📨\s*)?(?:New\s+)?message\s+from\s+([^:]+):/i);
     const senderName = n.sender_name || (senderMatch ? senderMatch[1].trim() : 'Unknown');
     
-    // ✅ FIX: Conditional message text - "New" only shows when unread
+    // ✅ FIX: Conditional display text - "New " only shows when unread
     const displayText = (() => {
       const txt = n.text || n.message || '';
-      if (txt && txt.includes('📨 New message from')) {
-        return isUnread ? txt : txt.replace('📨 New message from', '📨 Message from');
+      if (txt && txt.includes('📨')) {
+        // Remove the "New message from" prefix for display - use sender_name instead
+        const cleanText = txt.replace(/📨\s*(?:New\s+)?message\s+from\s+[^:]+:\s*/i, '');
+        return isUnread ? `📨 New message from ${senderName}` : `📨 Message from ${senderName}`;
       }
       return txt;
     })();
     
-    // Build thread_id: prefer real thread_id, fallback to msg_+id for single notifications
-    const threadId = n.thread_id || (n.id ? 'msg_' + n.id : '');
+    // Build thread_id: prefer real thread_id, fallback to msg_+id
+    const threadId = n.thread_id || ('msg_' + n.id);
     
     return `
       <div class="p-3 border-b border-gray-700 hover:bg-gray-700/50 cursor-pointer transition relative ${isUnread ? 'bg-[#c9a227]/10' : ''} ${isExpired ? 'opacity-50' : ''}" 
-           data-id="${n.id}" 
-           data-thread-id="${threadId}"
-           data-sender="${senderName}">
+          data-id="${n.id}" 
+          data-thread-id="${threadId}"
+          data-sender="${senderName}">
         
         ${isUnread ? '<span class="absolute left-2 top-4 w-2 h-2 bg-[#c9a227] rounded-full"></span>' : ''}
         
@@ -150,12 +180,12 @@ function renderNotificationPanel() {
             <div class="flex gap-1 flex-shrink-0" onclick="event.stopPropagation()">
               ${isUnread ? `
                 <button onclick="markNotificationRead(${n.id}); event.stopPropagation();" 
-                        class="text-[10px] text-[#c9a227] hover:text-[#facc15] px-1 py-0.5 rounded transition"
-                        title="Mark as read">✓</button>
+                       class="text-[10px] text-[#c9a227] hover:text-[#facc15] px-1 py-0.5 rounded transition"
+                       title="Mark as read">✓</button>
               ` : ''}
               <button onclick="deleteNotification(${n.id}); event.stopPropagation();" 
-                      class="text-[10px] text-red-400 hover:text-red-300 px-1 py-0.5 rounded transition"
-                      title="Delete">✕</button>
+                     class="text-[10px] text-red-400 hover:text-red-300 px-1 py-0.5 rounded transition"
+                     title="Delete">✕</button>
             </div>
           ` : ''}
         </div>
@@ -171,7 +201,7 @@ function renderNotificationPanel() {
     `;
   }).join('');
   
-  // Click handler: ✅ AUTO-MARK AS READ when clicked + open thread view
+  // Click handler: AUTO-MARK AS READ when clicked + open thread view
   list.querySelectorAll('[data-id]').forEach(el => {
     el.addEventListener('click', (e) => {
       if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
@@ -180,13 +210,15 @@ function renderNotificationPanel() {
       const threadId = el.dataset.threadId;
       const sender = el.dataset.sender;
       
-      // ✅ AUTO-MARK AS READ when user clicks to open (no manual button needed)
+      // ✅ AUTO-MARK AS READ when user clicks to open
       const notif = dojNotifications.find(n => n.id === id);
       if (notif && !notif.read) {
         notif.read = true;  // Update local state instantly
         updateNotificationBadge();  // Update badge instantly
         renderNotificationPanel();  // Re-render panel
         renderDojNotifications();  // Re-render dashboard
+        
+        // Sync to backend
         apiCall('markNotificationRead', { id }).catch(err => console.error('Failed to sync read status:', err));
       }
       
@@ -199,8 +231,8 @@ function renderNotificationPanel() {
 }
 
 /**
- * Render notifications in dashboard (latest 5)
- */
+Render notifications in dashboard (latest 5)
+*/
 function renderDojNotifications() {
   const container = document.getElementById('dojNotificationsContainer');
   if (!container) return;
@@ -215,27 +247,27 @@ function renderDojNotifications() {
   container.innerHTML = notifs.map(n => {
     const isUnread = !n.read;
     const isExpired = n.expires_at && new Date(n.expires_at) < new Date();
-    const isAnnouncement = n.text?.includes('📨 New message from') && n.subject === 'ANNOUNCEMENT';
+    const isAnnouncement = n.subject === 'ANNOUNCEMENT';
     
     const senderMatch = n.text?.match(/(?:📨\s*)?(?:New\s+)?message\s+from\s+([^:]+):/i);
     const senderName = n.sender_name || (senderMatch ? senderMatch[1].trim() : 'Unknown');
     
-    // ✅ FIX: Conditional message text - "New" only shows when unread
+    // ✅ FIX: Conditional display text
     const displayText = (() => {
       const txt = n.text || n.message || '';
-      if (txt && txt.includes('📨 New message from')) {
-        return isUnread ? txt : txt.replace('📨 New message from', '📨 Message from');
+      if (txt && txt.includes('📨')) {
+        return isUnread ? `📨 New message from ${senderName}` : `📨 Message from ${senderName}`;
       }
       return txt;
     })();
     
-    const threadId = n.thread_id || (n.id ? 'msg_' + n.id : '');
+    const threadId = n.thread_id || ('msg_' + n.id);
     
     return `
       <div class="flex justify-between items-start py-3 border-b border-gray-700 text-sm ${isUnread ? 'bg-gray-700/30' : ''} ${isExpired ? 'opacity-50' : ''} relative" 
-           data-id="${n.id}" 
-           data-thread-id="${threadId}"
-           data-sender="${senderName}">
+          data-id="${n.id}" 
+          data-thread-id="${threadId}"
+          data-sender="${senderName}">
         
         ${isUnread ? '<span class="w-2 h-2 bg-[#c9a227] rounded-full mt-1.5 flex-shrink-0"></span>' : ''}
         
@@ -250,8 +282,8 @@ function renderDojNotifications() {
         ${!isAnnouncement && !isExpired ? `
           <div class="flex gap-1 ml-2 flex-shrink-0" onclick="event.stopPropagation()">
             <button onclick="deleteNotification(${n.id}); event.stopPropagation();" 
-                    class="text-[10px] text-red-400 hover:text-red-300 px-1 py-0.5 rounded transition"
-                    title="Delete">✕</button>
+                   class="text-[10px] text-red-400 hover:text-red-300 px-1 py-0.5 rounded transition"
+                   title="Delete">✕</button>
           </div>
         ` : ''}
       </div>
@@ -260,8 +292,8 @@ function renderDojNotifications() {
 }
 
 /**
- * Mark a notification as read via API - ✅ Updates badge instantly
- */
+Mark a notification as read via API - Updates badge instantly
+*/
 async function markNotificationRead(id) {
   try {
     const notif = dojNotifications.find(n => n.id === id);
@@ -271,6 +303,7 @@ async function markNotificationRead(id) {
       renderNotificationPanel();
       renderDojNotifications();
     }
+    
     await apiCall('markNotificationRead', { id });
   } catch (err) {
     console.error('Failed to mark notification read:', err);
@@ -278,13 +311,13 @@ async function markNotificationRead(id) {
 }
 
 /**
- * Reply to a notification - Works for ANY sender, pre-fills subject/message
- */
+Reply to a notification
+*/
 function replyToNotification(senderName, threadId = '') {
   if (!senderName || senderName === 'Unknown') {
     const notif = dojNotifications.find(n => n.thread_id === threadId || n.id === parseInt(threadId));
     if (notif?.text) {
-      const match = notif.text.match(/(?:📨\s*)?(?:New\s+)?message\s+from\s+([^:]+):/i);
+      const match = notif.text.match(/(?:📨\s)?(?:New\s+)?message\s+from\s+([^:]+):/i);
       if (match) senderName = match[1].trim();
     }
   }
@@ -308,23 +341,33 @@ function replyToNotification(senderName, threadId = '') {
 }
 
 /**
- * Delete a notification
- */
+Delete a notification - ✅ FIXED: Actually calls delete endpoint
+*/
 async function deleteNotification(id) {
   if (!confirm('Delete this notification?')) return;
+  
   try {
-    await apiCall('markNotificationRead', { id });
+    // ✅ FIX: Call the correct delete endpoint
+    await apiCall('deleteMessage', { 
+      message_id: id,
+      deleted_by: currentUser.name
+    });
+    
+    // Remove from local array
     const index = dojNotifications.findIndex(n => n.id === id);
-    if (index > -1) dojNotifications.splice(index, 1);
+    if (index > -1) {
+      dojNotifications.splice(index, 1);
+    }
+    
     updateNotificationBadge();
     renderNotificationPanel();
     renderDojNotifications();
+    
   } catch (err) {
     console.error('Failed to delete notification:', err);
     alert('Could not delete notification. Please try again.');
   }
 }
-
 /**
  * Send a notification to a role
  */
