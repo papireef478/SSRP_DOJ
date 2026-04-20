@@ -35,8 +35,21 @@ async function renderDashboardByRole() {
       ];
     }
   }
-  
-  // Tasks HTML (for roles that have tasks) - with null-safe data-id
+  // Helper: Format ISO date to MM/DD/YYYY
+function formatDateForDisplay(dateStr) {
+  if (!dateStr) return '';
+  // If already in MM/DD/YYYY format, return as-is
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) return dateStr;
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
+  } catch (e) {
+    return dateStr;
+  }
+}
+
+// Tasks HTML (for roles that have tasks) - with proper date formatting + null-safe data-id
 const rolesWithTasks = ['clerk', 'judge', 'attorney', 'public_defender', 'district_attorney', 'bailiff', 'marshal', 'reporter', 'admin', 'master_clerk', 'chief_justice'];
 const tasksHtml = rolesWithTasks.includes(role) ? `
   <div class="card p-6 mb-6">
@@ -48,8 +61,10 @@ const tasksHtml = rolesWithTasks.includes(role) ? `
     </div>
     <ul id="tasksList" class="space-y-2">
       ${tasks.length > 0 ? tasks.map(task => {
-        // ✅ Ensure task.id exists and is valid
-        const taskId = task.id != null ? task.id : '';
+        // ✅ Ensure task.id exists and is valid number
+        const taskId = task.id != null && !isNaN(parseInt(task.id)) ? parseInt(task.id) : '';
+        // ✅ Format due_date properly
+        const dueDisplay = formatDateForDisplay(task.due_date || task.due || task.frequency || '');
         return `
           <li class="flex items-center gap-2">
             <input type="checkbox" 
@@ -57,7 +72,7 @@ const tasksHtml = rolesWithTasks.includes(role) ? `
                    data-id="${taskId}" 
                    class="task-checkbox">
             <span class="flex-1">${task.task || 'Unnamed task'}</span>
-            <span class="text-xs text-gray-500">${task.due_date || task.due || task.frequency || ''}</span>
+            <span class="text-xs text-gray-500">${dueDisplay}</span>
           </li>
         `;
       }).join('') : '<li class="text-gray-400 text-sm">No tasks assigned</li>'}
