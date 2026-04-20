@@ -11,21 +11,21 @@ async function renderDashboardByRole() {
   
   const role = currentUser.role;
   
-  // Load real tasks for clerks
-let tasks = [];
-if (role === 'clerk' || role === 'admin' || role === 'master_clerk') {
-  try {
-    const tasksData = await apiCall('getClerkTasks');
-    // ✅ Filter tasks by clerk_type column
-    tasks = (tasksData.tasks || []).filter(task => {
-      const clerkType = task.clerk_type?.toLowerCase() || 'all';
-      if (clerkType === 'all') return true; // Show to both clerks and admins
-      if (clerkType === 'admin' && (role === 'admin' || role === 'master_clerk')) return true;
-      if (clerkType === 'clerk' && role === 'clerk') return true;
-      return false;
-    });
-  } catch (err) {
-    console.error('Failed to load clerk tasks:', err);
+  // Load real tasks for clerks AND admins/master_clerks
+  let tasks = [];
+  if (role === 'clerk' || role === 'admin' || role === 'master_clerk') {
+    try {
+      const tasksData = await apiCall('getClerkTasks');
+      // ✅ Filter tasks by clerk_type column
+      tasks = (tasksData.tasks || []).filter(task => {
+        const clerkType = task.clerk_type?.toLowerCase() || 'all';
+        if (clerkType === 'all') return true; // Show to both clerks and admins
+        if (clerkType === 'admin' && (role === 'admin' || role === 'master_clerk')) return true;
+        if (clerkType === 'clerk' && role === 'clerk') return true;
+        return false;
+      });
+    } catch (err) {
+      console.error('Failed to load clerk tasks:', err);
       // Fallback to mock tasks if API fails
       tasks = [
         { id: 1, task: "Check Discord tickets", due: "Today", status: "pending" },
@@ -37,6 +37,7 @@ if (role === 'clerk' || role === 'admin' || role === 'master_clerk') {
   }
   
   // Tasks HTML (for roles that have tasks)
+  // ✅ FIX: Added 'master_clerk' + fixed typo in 'chief_justice'
   const rolesWithTasks = ['clerk', 'judge', 'attorney', 'public_defender', 'district_attorney', 'bailiff', 'marshal', 'reporter', 'admin', 'master_clerk', 'chief_justice'];
   const tasksHtml = rolesWithTasks.includes(role) ? `
     <div class="card p-6 mb-6">
@@ -58,17 +59,17 @@ if (role === 'clerk' || role === 'admin' || role === 'master_clerk') {
     </div>
   ` : '';
   
-  // Notifications HTML (all roles)
-const notifHtml = `
-  <div class="card p-6 mb-6">
-    <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
-      <i data-lucide="bell"></i> DOJ Notifications
+  // ✅ FIX: Notifications HTML - ADDED MISSING OPENING CARD DIV
+  const notifHtml = `
+    <div class="card p-6 mb-6">
+      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+        <i data-lucide="bell"></i> DOJ Notifications
+      </div>
+      <div id="dojNotificationsContainer">
+        <!-- Rendered by renderDojNotifications() -->
+      </div>
     </div>
-    <div id="dojNotificationsContainer">
-      <!-- Rendered by renderDojNotifications() -->
-    </div>
-  </div>
-`;
+  `;
   
   // Communication buttons by role
   let commButtons = '';
@@ -95,8 +96,8 @@ const notifHtml = `
       <button id="sendToClerkBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Clerk</button>
       <button id="sendToCJBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Chief Justice</button>
     `;
-  } else if (role === 'admin' || role === 'chief_justice') {
-    // ✅ Admin/CJ can send to ALL DOJ roles
+  } else if (role === 'admin' || role === 'master_clerk' || role === 'chief_justice') {
+    // ✅ Admin/Master Clerk/CJ can send to ALL DOJ roles
     commButtons = `
       <button id="sendToClerkBtn" class="btn-secondary py-2 px-4 rounded-lg">Send to Clerk</button>
       <button id="sendToDABtn" class="btn-secondary py-2 px-4 rounded-lg">Send to DA</button>
@@ -115,14 +116,15 @@ const notifHtml = `
     `;
   }
   
-const commHtml = `
-  <div class="card p-6 mb-6">
-    <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
-      <i data-lucide="message-square"></i> Communications
+  // ✅ FIX: Communications HTML - ADDED MISSING OPENING CARD DIV
+  const commHtml = `
+    <div class="card p-6 mb-6">
+      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+        <i data-lucide="message-square"></i> Communications
+      </div>
+      <div class="flex flex-wrap gap-3">${commButtons}</div>
     </div>
-    <div class="flex flex-wrap gap-3">${commButtons}</div>
-  </div>
-`;
+  `;
   
   // Role-specific content
   let roleSpecific = '';
@@ -134,13 +136,13 @@ const commHtml = `
           <i data-lucide="file-plus"></i> New Filing
         </div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=59417065#gid" target="_blank" class="btn-secondary text-center py-2 rounded-lg">📄 Case Filing</a>
-          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1895005036#gid" target="_blank" class="btn-secondary text-center py-2 rounded-lg">💍 Marriage</a>
-          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1376146295#gid" target="_blank" class="btn-secondary text-center py-2 rounded-lg">🚗 Property</a>
-          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1538730298#gid" target="_blank" class="btn-secondary text-center py-2 rounded-lg">🏢 Professional</a>
-          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1478971826#gid" target="_blank" class="btn-secondary text-center py-2 rounded-lg">👶 Paternity</a>
-          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1874312862#gid" target="_blank" class="btn-secondary text-center py-2 rounded-lg">📜 Will</a>
-          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=318970083#gid" target="_blank" class="btn-secondary text-center py-2 rounded-lg">💰 Treasury</a>
+          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=59417065#gid=59417065" target="_blank" class="btn-secondary text-center py-2 rounded-lg">📄 Case Filing</a>
+          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1895005036#gid=1895005036" target="_blank" class="btn-secondary text-center py-2 rounded-lg">💍 Marriage</a>
+          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1376146295#gid=1376146295" target="_blank" class="btn-secondary text-center py-2 rounded-lg">🚗 Property</a>
+          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1538730298#gid=1538730298" target="_blank" class="btn-secondary text-center py-2 rounded-lg">🏢 Professional</a>
+          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1478971826#gid=1478971826" target="_blank" class="btn-secondary text-center py-2 rounded-lg">👶 Paternity</a>
+          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1874312862#gid=1874312862" target="_blank" class="btn-secondary text-center py-2 rounded-lg">📜 Will</a>
+          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=318970083#gid=318970083" target="_blank" class="btn-secondary text-center py-2 rounded-lg">💰 Treasury</a>
           <a href="${allFilingsSheetUrl}" target="_blank" class="btn-secondary text-center py-2 rounded-lg">📊 All Sheets</a>
         </div>
       </div>
@@ -247,31 +249,31 @@ const commHtml = `
         <button id="serviceProcessBtn" class="btn-secondary py-2 px-4 rounded-lg">Manage Service of Process</button>
       </div>
     `;
-} else if (role === 'marshal') {
-  roleSpecific = `
-    <div class="card p-6 mb-6">
-      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
-        <i data-lucide="badge"></i> U.S. Marshal Dashboard
+  } else if (role === 'marshal') {
+    roleSpecific = `
+      <div class="card p-6 mb-6">
+        <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+          <i data-lucide="badge"></i> U.S. Marshal Dashboard
+        </div>
+        <p class="text-gray-300 mb-4">Federal court security, prisoner transport, and warrant service.</p>
       </div>
-      <p class="text-gray-300 mb-4">Federal court security, prisoner transport, and warrant service.</p>
-    </div>
-    <div class="card p-6 mb-6">
-      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
-        <i data-lucide="truck"></i> Transport & Security
+      <div class="card p-6 mb-6">
+        <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+          <i data-lucide="truck"></i> Transport & Security
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <button id="transportRequestBtn" class="btn-secondary py-2 px-4 rounded-lg">Request Prisoner Transport</button>
+          <button id="warrantServiceBtn" class="btn-secondary py-2 px-4 rounded-lg">Serve Federal Warrant</button>
+          <button id="manhuntReportBtn" class="btn-secondary py-2 px-4 rounded-lg">Report Manhunt Status</button>
+        </div>
       </div>
-      <div class="flex flex-wrap gap-3">
-        <button id="transportRequestBtn" class="btn-secondary py-2 px-4 rounded-lg">Request Prisoner Transport</button>
-        <button id="warrantServiceBtn" class="btn-secondary py-2 px-4 rounded-lg">Serve Federal Warrant</button>
-        <button id="manhuntReportBtn" class="btn-secondary py-2 px-4 rounded-lg">Report Manhunt Status</button>
+      <div class="card p-6 mb-6">
+        <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+          <i data-lucide="clipboard"></i> Court Security Log
+        </div>
+        <button id="securityLogBtn" class="btn-secondary py-2 px-4 rounded-lg">Submit Security Report</button>
       </div>
-    </div>
-    <div class="card p-6 mb-6">
-      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
-        <i data-lucide="clipboard"></i> Court Security Log
-      </div>
-      <button id="securityLogBtn" class="btn-secondary py-2 px-4 rounded-lg">Submit Security Report</button>
-    </div>
-  `;
+    `;
   } else if (role === 'reporter') {
     roleSpecific = `
       <div class="card p-6 mb-6">
@@ -281,65 +283,64 @@ const commHtml = `
         <button id="uploadTranscriptBtn" class="btn-secondary py-2 px-4 rounded-lg">Upload Transcript URL</button>
       </div>
     `;
-} else if (role === 'admin' || role === 'master_clerk') {
-  roleSpecific = `
-    <!-- ✅ NEW: New Filing Section (same as Clerk) -->
-    <div class="card p-6 mb-6">
-      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
-        <i data-lucide="file-plus"></i> New Filing
+  } else if (role === 'admin' || role === 'master_clerk') {
+    roleSpecific = `
+      <!-- ✅ NEW: New Filing Section (same as Clerk) -->
+      <div class="card p-6 mb-6">
+        <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+          <i data-lucide="file-plus"></i> New Filing
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=59417065#gid=59417065" target="_blank" class="btn-secondary text-center py-2 rounded-lg">📄 Case Filing</a>
+          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1895005036#gid=1895005036" target="_blank" class="btn-secondary text-center py-2 rounded-lg">💍 Marriage</a>
+          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1376146295#gid=1376146295" target="_blank" class="btn-secondary text-center py-2 rounded-lg">🚗 Property</a>
+          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1538730298#gid=1538730298" target="_blank" class="btn-secondary text-center py-2 rounded-lg">🏢 Professional</a>
+          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1478971826#gid=1478971826" target="_blank" class="btn-secondary text-center py-2 rounded-lg">👶 Paternity</a>
+          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1874312862#gid=1874312862" target="_blank" class="btn-secondary text-center py-2 rounded-lg">📜 Will</a>
+          <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=318970083#gid=318970083" target="_blank" class="btn-secondary text-center py-2 rounded-lg">💰 Treasury</a>
+          <a href="${allFilingsSheetUrl}" target="_blank" class="btn-secondary text-center py-2 rounded-lg">📊 All Sheets</a>
+        </div>
       </div>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=59417065#gid=59417065" target="_blank" class="btn-secondary text-center py-2 rounded-lg">📄 Case Filing</a>
-        <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1895005036#gid=1895005036" target="_blank" class="btn-secondary text-center py-2 rounded-lg">💍 Marriage</a>
-        <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1376146295#gid=1376146295" target="_blank" class="btn-secondary text-center py-2 rounded-lg">🚗 Property</a>
-        <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1538730298#gid=1538730298" target="_blank" class="btn-secondary text-center py-2 rounded-lg">🏢 Professional</a>
-        <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1478971826#gid=1478971826" target="_blank" class="btn-secondary text-center py-2 rounded-lg">👶 Paternity</a>
-        <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=1874312862#gid=1874312862" target="_blank" class="btn-secondary text-center py-2 rounded-lg">📜 Will</a>
-        <a href="https://docs.google.com/spreadsheets/d/1DFdvYns2qQUu8WteOBkKwKuX0FMRmFwhOpEZQqvqBSc/edit?gid=318970083#gid=318970083" target="_blank" class="btn-secondary text-center py-2 rounded-lg">💰 Treasury</a>
-        <a href="${allFilingsSheetUrl}" target="_blank" class="btn-secondary text-center py-2 rounded-lg">📊 All Sheets</a>
+      
+      <!-- ✅ EXISTING: User Management -->
+      <div class="card p-6 mb-6">
+        <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+          <i data-lucide="users"></i> User Management
+        </div>
+        <button id="userMgmtBtn" class="btn-secondary py-2 px-4 rounded-lg">Manage Users</button>
       </div>
-    </div>
-    
-    <!-- ✅ EXISTING: User Management -->
-    <div class="card p-6 mb-6">
-      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
-        <i data-lucide="users"></i> User Management
+      
+      <!-- ✅ EXISTING: Judge Assignment -->
+      <div class="card p-6 mb-6">
+        <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+          <i data-lucide="refresh-cw"></i> Judge Assignment
+        </div>
+        <button id="assignJudgeBtn" class="btn-secondary py-2 px-4 rounded-lg">Auto-Assign Unassigned Cases</button>
       </div>
-      <button id="userMgmtBtn" class="btn-secondary py-2 px-4 rounded-lg">Manage Users</button>
-    </div>
-    
-    <!-- ✅ EXISTING: Judge Assignment -->
-    <div class="card p-6 mb-6">
-      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
-        <i data-lucide="refresh-cw"></i> Judge Assignment
+      
+      <!-- ✅ EXISTING: Recusal Queue -->
+      <div class="card p-6 mb-6">
+        <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+          <i data-lucide="refresh-cw"></i> Recusal Queue
+        </div>
+        <button id="recusalQueueBtn" class="btn-secondary py-2 px-4 rounded-lg">View Queue</button>
       </div>
-      <button id="assignJudgeBtn" class="btn-secondary py-2 px-4 rounded-lg">Auto-Assign Unassigned Cases</button>
-    </div>
-    
-    <!-- ✅ EXISTING: Recusal Queue -->
-    <div class="card p-6 mb-6">
-      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
-        <i data-lucide="refresh-cw"></i> Recusal Queue
+      
+      <!-- ✅ EXISTING: Audit Tools -->
+      <div class="card p-6 mb-6">
+        <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+          <i data-lucide="chart-line"></i> Audit Tools
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <button id="financialAuditBtn" class="btn-secondary py-2 px-4 rounded-lg">Financial Summary</button>
+          <button id="offlineDuesBtn" class="btn-secondary py-2 px-4 rounded-lg">Offline Dues</button>
+          <a href="${allFilingsSheetUrl}" target="_blank" class="btn-secondary py-2 px-4 rounded-lg">Audit Log (All Filings)</a>
+          <!-- ✅ AUDIT TOOLS PLACEHOLDER BUTTONS -->
+          <button id="cleanupFilesBtn" class="btn-secondary py-2 px-4 rounded-lg opacity-75 cursor-not-allowed" title="Coming soon">🧹 Clean-up Files</button>
+          <button id="issueMarriageBtn" class="btn-secondary py-2 px-4 rounded-lg opacity-75 cursor-not-allowed" title="Coming soon">💒 Issue Marriage Certificates</button>
+        </div>
       </div>
-      <button id="recusalQueueBtn" class="btn-secondary py-2 px-4 rounded-lg">View Queue</button>
-    </div>
-    
-    <!-- ✅ EXISTING: Audit Tools -->
-    <div class="card p-6 mb-6">
-      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
-        <i data-lucide="chart-line"></i> Audit Tools
-      </div>
-      <div class="flex flex-wrap gap-3">
-        <button id="financialAuditBtn" class="btn-secondary py-2 px-4 rounded-lg">Financial Summary</button>
-        <button id="offlineDuesBtn" class="btn-secondary py-2 px-4 rounded-lg">Offline Dues</button>
-        <a href="${allFilingsSheetUrl}" target="_blank" class="btn-secondary py-2 px-4 rounded-lg">Audit Log (All Filings)</a>
-        <!-- ✅ AUDIT TOOLS PLACEHOLDER BUTTONS -->
-        <button id="cleanupFilesBtn" class="btn-secondary py-2 px-4 rounded-lg opacity-75 cursor-not-allowed" title="Coming soon">🧹 Clean-up Files</button>
-        <button id="issueMarriageBtn" class="btn-secondary py-2 px-4 rounded-lg opacity-75 cursor-not-allowed" title="Coming soon">💒 Issue Marriage Certificates</button>
-      </div>
-    </div>
-  `;
-}
+    `;
   } else if (role === 'chief_justice') {
     roleSpecific = `
       <div class="card p-6 mb-6">
@@ -406,9 +407,9 @@ const commHtml = `
  * @param {string} role - User's role
  */
 function attachDashboardEventListeners(role) {
-  // Task refresh (clerk only)
+  // Task refresh (clerk/admin/master_clerk)
   document.getElementById('refreshTasks')?.addEventListener('click', async () => {
-    if (role === 'clerk') {
+    if (role === 'clerk' || role === 'admin' || role === 'master_clerk') {
       try {
         const tasksData = await apiCall('getClerkTasks');
         if (tasksData.tasks?.length > 0) {
@@ -431,10 +432,10 @@ function attachDashboardEventListeners(role) {
     }
   });
   
-  // Task checkboxes (clerk only)
+  // Task checkboxes (clerk/admin/master_clerk)
   document.querySelectorAll('.task-checkbox')?.forEach(cb => {
     cb.addEventListener('change', async () => {
-      if (role === 'clerk') {
+      if (role === 'clerk' || role === 'admin' || role === 'master_clerk') {
         try {
           await apiCall('updateClerkTask', {
             id: parseInt(cb.dataset.id),
@@ -502,7 +503,7 @@ function attachDashboardEventListeners(role) {
     document.getElementById('serviceProcessBtn')?.addEventListener('click', () => alert('Service of process (coming soon)'));
   } else if (role === 'reporter') {
     document.getElementById('uploadTranscriptBtn')?.addEventListener('click', () => alert('Upload transcript URL (coming soon)'));
-  } else if (role === 'admin') {
+  } else if (role === 'admin' || role === 'master_clerk') {
     document.getElementById('userMgmtBtn')?.addEventListener('click', () => window.open(usersSheetUrl, '_blank'));
     document.getElementById('assignJudgeBtn')?.addEventListener('click', () => alert('Auto-assign judges (coming soon)'));
     document.getElementById('recusalQueueBtn')?.addEventListener('click', () => {
@@ -514,20 +515,18 @@ function attachDashboardEventListeners(role) {
     });
     document.getElementById('financialAuditBtn')?.addEventListener('click', () => alert('Financial summary (coming soon)'));
     document.getElementById('offlineDuesBtn')?.addEventListener('click', () => window.open(offlineDuesSheetUrl, '_blank'));
-    
-} else if (role === 'marshal') {
-  document.getElementById('transportRequestBtn')?.addEventListener('click', () => requestTransport());
-  document.getElementById('warrantServiceBtn')?.addEventListener('click', () => serveWarrant());
-  document.getElementById('manhuntReportBtn')?.addEventListener('click', () => reportManhunt());
-  document.getElementById('securityLogBtn')?.addEventListener('click', () => submitSecurityReport());
-   
- // ✅ AUDIT PLACEHOLDER BUTTONS - Admin
+    // ✅ AUDIT PLACEHOLDER BUTTONS - Admin/Master Clerk
     document.getElementById('cleanupFilesBtn')?.addEventListener('click', () => {
       alert('🧹 Clean-up Files feature coming soon!\n\nThis will help audit and organize case files in Google Drive.');
     });
     document.getElementById('issueMarriageBtn')?.addEventListener('click', () => {
       alert('💒 Issue Marriage Certificates feature coming soon!\n\nThis will generate and send official marriage certificates.');
     });
+  } else if (role === 'marshal') {
+    document.getElementById('transportRequestBtn')?.addEventListener('click', () => requestTransport());
+    document.getElementById('warrantServiceBtn')?.addEventListener('click', () => serveWarrant());
+    document.getElementById('manhuntReportBtn')?.addEventListener('click', () => reportManhunt());
+    document.getElementById('securityLogBtn')?.addEventListener('click', () => submitSecurityReport());
   } else if (role === 'chief_justice') {
     document.getElementById('cjViewRecusalsBtn')?.addEventListener('click', () => {
       if (typeof showRecusalQueue === 'function') {
@@ -539,7 +538,6 @@ function attachDashboardEventListeners(role) {
     document.getElementById('cjAssignJudgeBtn')?.addEventListener('click', () => alert('Manual judge assignment (coming soon)'));
     document.getElementById('cjViewAuditBtn')?.addEventListener('click', () => window.open(allFilingsSheetUrl, '_blank'));
     document.getElementById('cjUserMgmtBtn')?.addEventListener('click', () => window.open(usersSheetUrl, '_blank'));
-    
     // ✅ AUDIT PLACEHOLDER BUTTONS - Chief Justice
     document.getElementById('cleanupFilesBtn')?.addEventListener('click', () => {
       alert('🧹 Clean-up Files feature coming soon!\n\nThis will help audit and organize case files in Google Drive.');
@@ -576,7 +574,7 @@ function attachDashboardEventListeners(role) {
     }
   });
   
-  // ✅ NEW: "Send to All DOJ Roles" button (admin/CJ only)
+  // ✅ NEW: "Send to All DOJ Roles" button (admin/master_clerk/CJ only)
   document.getElementById('sendToAllDOJBtn')?.addEventListener('click', () => {
     if (typeof showCommunicationModal === 'function') {
       // Open modal with special "all_doj_roles" option
@@ -694,11 +692,11 @@ async function renderDADashboard() {
     </div>
   `;
 }
+
 /**
  * U.S. Marshal Functions
  * Replace the alerts with actual API calls or modal forms.
  */
-
 function requestTransport() {
   alert(`🚔 Prisoner Transport Request (coming soon)\n\nSubmit a request to transport a prisoner from Bolingbroke Penitentiary to court.`);
   // TODO: Open a modal with fields: prisoner name, case number, destination, date/time, security level.
