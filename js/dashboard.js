@@ -453,7 +453,7 @@ function attachDashboardEventListeners(role) {
     }
   });
   
-// Task checkboxes (clerk/admin/master_clerk) - with comprehensive null safety
+// Task checkboxes (clerk/admin/master_clerk) - with strict ID validation
 document.querySelectorAll('.task-checkbox')?.forEach(cb => {
   cb.addEventListener('change', async () => {
     // ✅ Check if user is logged in
@@ -471,27 +471,27 @@ document.querySelectorAll('.task-checkbox')?.forEach(cb => {
       return;
     }
     
-    const taskId = cb.dataset.id;
-    
-    // ✅ Skip if no valid task ID
-    if (!taskId || taskId.trim() === '') {
-      console.warn('Task checkbox missing data-id, skipping update');
-      cb.checked = !cb.checked; // Revert UI
-      return;
-    }
-    
-    // ✅ Parse and validate task ID as number
-    const taskIdNum = parseInt(taskId, 10);
-    if (isNaN(taskIdNum) || taskIdNum <= 0) {
-      console.warn('Invalid task ID:', taskId);
+    // ✅ Get and validate task ID from data attribute
+    const taskIdStr = cb.dataset.id;
+    if (!taskIdStr || taskIdStr.trim() === '' || isNaN(parseInt(taskIdStr, 10))) {
+      console.warn('Invalid or missing task ID:', taskIdStr);
       cb.checked = !cb.checked; // Revert UI
       alert('❌ Invalid task ID. Please refresh the page and try again.');
       return;
     }
     
+    const taskId = parseInt(taskIdStr, 10);
+    if (taskId <= 0) {
+      console.warn('Task ID must be positive:', taskId);
+      cb.checked = !cb.checked; // Revert UI
+      alert('❌ Invalid task ID. Please refresh and try again.');
+      return;
+    }
+    
     try {
+      // ✅ Call backend with validated ID
       await apiCall('updateClerkTask', {
-        id: taskIdNum,
+        id: taskId,  // ✅ Must be a valid positive integer
         status: cb.checked ? 'done' : 'pending',
         completed_by: currentUser.name
       });
