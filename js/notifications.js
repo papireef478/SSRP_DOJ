@@ -6,6 +6,49 @@
 /**
  * Load notifications from API for current user
  */
+// ============================================================================
+// 🔹 HELPER: Render message with clickable URL links
+// ============================================================================
+function renderMessageWithLinks(messageText, urlsParam) {
+  // Escape HTML to prevent XSS
+  const escapeHtml = (str) => {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  };
+  
+  let html = escapeHtml(messageText || '');
+  
+  // Parse URLs: handle string or array from backend
+  let urlsArray = [];
+  if (urlsParam) {
+    if (Array.isArray(urlsParam)) {
+      urlsArray = urlsParam.filter(u => u && u.trim());
+    } else if (typeof urlsParam === 'string') {
+      if (urlsParam.trim().startsWith('[')) {
+        try { urlsArray = JSON.parse(urlsParam); } catch(e) { urlsArray = []; }
+      } else if (urlsParam.includes(',')) {
+        urlsArray = urlsParam.split(',').map(u => u.trim()).filter(u => u);
+      } else if (urlsParam.trim()) {
+        urlsArray = [urlsParam.trim()];
+      }
+    }
+  }
+  
+  // Append clickable links
+  if (urlsArray.length > 0) {
+    const uniqueUrls = [...new Set(urlsArray)].filter(u => u && u.trim());
+    uniqueUrls.forEach(url => {
+      const safeUrl = url.startsWith('http') ? url : `https://${url}`;
+      const displayText = url.length > 45 ? url.substring(0, 42) + '...' : url;
+      html += `<br><a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener" class="message-link">🔗 ${escapeHtml(displayText)}</a>`;
+    });
+  }
+  
+  return html;
+}
+
 async function loadNotifications() {
   if (!currentUser?.name) return;
   
