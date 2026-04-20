@@ -10,6 +10,11 @@
  * @returns {Promise<object>} API response data
  */
 async function apiCall(action, params = {}, baseUrl = API_URL) {
+  // ✅ FIX: Ensure params is never null or undefined
+  if (!params || typeof params !== 'object') {
+    params = {};
+  }
+  
   const url = new URL(baseUrl);
   url.searchParams.append('action', action);
   
@@ -18,11 +23,11 @@ async function apiCall(action, params = {}, baseUrl = API_URL) {
     // ✅ Handle arrays: join with commas so backend can split them
     if (Array.isArray(value)) {
       url.searchParams.append(key, value.join(','));
-    } 
+    }
     // ✅ Handle plain objects: stringify into 'data' parameter
     else if (typeof value === 'object' && value !== null) {
       url.searchParams.append('data', JSON.stringify(value));
-    } 
+    }
     // ✅ Handle strings/numbers: append directly
     else {
       url.searchParams.append(key, value);
