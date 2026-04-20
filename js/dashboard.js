@@ -61,15 +61,15 @@ async function renderDashboardByRole() {
   
   // ✅ FIX: Notifications HTML - ADDED MISSING OPENING CARD DIV
   const notifHtml = `
-    <div class="card p-6 mb-6">
-      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
-        <i data-lucide="bell"></i> DOJ Notifications
-      </div>
-      <div id="dojNotificationsContainer">
-        <!-- Rendered by renderDojNotifications() -->
-      </div>
+  <div class="card p-6 mb-6">
+    <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+      <i data-lucide="bell"></i> DOJ Notifications
     </div>
-  `;
+    <div id="dojNotificationsContainer">
+      <!-- Rendered by renderDojNotifications() -->
+    </div>
+  </div>
+`;
   
   // Communication buttons by role
   let commButtons = '';
@@ -117,14 +117,14 @@ async function renderDashboardByRole() {
   }
   
   // ✅ FIX: Communications HTML - ADDED MISSING OPENING CARD DIV
-  const commHtml = `
-    <div class="card p-6 mb-6">
-      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
-        <i data-lucide="message-square"></i> Communications
-      </div>
-      <div class="flex flex-wrap gap-3">${commButtons}</div>
+const commHtml = `
+  <div class="card p-6 mb-6">
+    <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+      <i data-lucide="message-square"></i> Communications
     </div>
-  `;
+    <div class="flex flex-wrap gap-3">${commButtons}</div>
+  </div>
+`;
   
   // Role-specific content
   let roleSpecific = '';
