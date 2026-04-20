@@ -151,8 +151,14 @@ function updateNotificationBadge() {
   if (!badge) return;
   
   const unread = dojNotifications.filter(n => {
-    const isRead = typeof n.read === 'boolean' ? n.read : String(n.read).toUpperCase() === 'TRUE';
-    const isReceived = n.sender_name !== currentUser?.name; // Only count messages received (not sent)
+    // Convert read field properly
+    const isRead = typeof n.read === 'boolean' 
+      ? n.read 
+      : String(n.read).toUpperCase() === 'TRUE';
+    
+    // ✅ Only count messages RECEIVED (not sent by current user)
+    const isReceived = n.sender_name !== currentUser?.name;
+    
     return !isRead && isReceived;
   }).length;
   
@@ -165,10 +171,9 @@ function updateNotificationBadge() {
     badge.classList.add('hidden');
   }
 }
-
 // ============================================================================
 // 🔹 RENDER NOTIFICATION DROPDOWN PANEL
-// ✅ Clean text format + instant badge update on click
+// ✅ Clean text + hide sent messages + instant badge update on click
 // ============================================================================
 function renderNotificationPanel() {
   const list = document.getElementById('notifList');
@@ -179,21 +184,26 @@ function renderNotificationPanel() {
     return;
   }
   
-  list.innerHTML = dojNotifications.map(n => {
+  // ✅ Filter: Only show received messages (hide sent)
+  const receivedNotifs = dojNotifications.filter(n => n.sender_name !== currentUser?.name);
+  
+  if (receivedNotifs.length === 0) {
+    list.innerHTML = '<div class="p-3 text-gray-400 text-center">No new messages</div>';
+    return;
+  }
+  
+  list.innerHTML = receivedNotifs.map(n => {
     const isUnread = !n.read;
     const isExpired = n.expires_at && new Date(n.expires_at) < new Date();
     const isAnnouncement = n.subject === 'ANNOUNCEMENT';
     
-    // ✅ Build clean display text: "📨 New message: Subject" or "Subject"
-    const displayText = buildNotificationDisplayText(n, currentUser);
+    // ✅ Clean display text: unread = "📨 New message: Subject", read = "Subject"
+    const subject = n.text || n.subject || 'No subject';
+    const displayText = isUnread 
+      ? `📨 New message: ${subject}` 
+      : `${subject}`;
     
-    // Build thread_id: prefer real thread_id, fallback to msg_+id
     const threadId = n.thread_id || ('msg_' + n.id);
-    
-    // ✅ Hide sent messages from notification panel (optional - remove this if you want to show them)
-    if (n.sender_name === currentUser?.name) {
-      return ''; // Skip rendering sent messages in panel
-    }
     
     return `
       <div class="p-3 border-b border-gray-700 hover:bg-gray-700/50 cursor-pointer transition relative ${isUnread ? 'bg-[#c9a227]/10' : ''} ${isExpired ? 'opacity-50' : ''}" 
@@ -230,7 +240,7 @@ function renderNotificationPanel() {
         </div>
       </div>
     `;
-  }).filter(html => html).join(''); // Filter out empty strings from skipped sent messages
+  }).join('');
   
   // ✅ Click handler: Mark read + update UI INSTANTLY + sync to backend
   list.querySelectorAll('[data-id]').forEach(el => {
@@ -289,8 +299,11 @@ function renderDojNotifications() {
     const isExpired = n.expires_at && new Date(n.expires_at) < new Date();
     const isAnnouncement = n.subject === 'ANNOUNCEMENT';
     
-    // ✅ Build clean display text
-    const displayText = buildNotificationDisplayText(n, currentUser);
+    // ✅ Clean display text
+    const subject = n.text || n.subject || 'No subject';
+    const displayText = isUnread 
+      ? `📨 New message: ${subject}` 
+      : `${subject}`;
     
     const threadId = n.thread_id || ('msg_' + n.id);
     
