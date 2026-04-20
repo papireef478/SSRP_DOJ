@@ -455,7 +455,8 @@ function attachDashboardEventListeners(role) {
               <li class="flex items-center gap-2">
                 <input type="checkbox" ${task.status === 'done' ? 'checked' : ''} data-id="${task.id}" class="task-checkbox">
                 <span class="flex-1">${task.task}</span>
-                <span class="text-xs text-gray-500">${task.due || task.frequency || ''}</span>
+               <span class="text-xs text-gray-500">
+  ${formatDateForDisplay(task.due_date || task.due || task.frequency || '')}</span>
               </li>
             `).join('');
           }
