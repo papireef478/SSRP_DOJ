@@ -59,16 +59,16 @@ if (role === 'clerk' || role === 'admin' || role === 'master_clerk') {
   ` : '';
   
   // Notifications HTML (all roles)
-  const notifHtml = `
-    
-      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
-        <i data-lucide="bell"></i> DOJ Notifications
-      </div>
-      <div id="dojNotificationsContainer">
-        <!-- Rendered by renderDojNotifications() -->
-      </div>
+const notifHtml = `
+  <div class="card p-6 mb-6">
+    <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+      <i data-lucide="bell"></i> DOJ Notifications
     </div>
-  `;
+    <div id="dojNotificationsContainer">
+      <!-- Rendered by renderDojNotifications() -->
+    </div>
+  </div>
+`;
   
   // Communication buttons by role
   let commButtons = '';
@@ -115,14 +115,14 @@ if (role === 'clerk' || role === 'admin' || role === 'master_clerk') {
     `;
   }
   
-  const commHtml = `
-    
-      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
-        <i data-lucide="message-square"></i> Communications
-      </div>
-      <div class="flex flex-wrap gap-3">${commButtons}</div>
+const commHtml = `
+  <div class="card p-6 mb-6">
+    <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+      <i data-lucide="message-square"></i> Communications
     </div>
-  `;
+    <div class="flex flex-wrap gap-3">${commButtons}</div>
+  </div>
+`;
   
   // Role-specific content
   let roleSpecific = '';
@@ -281,7 +281,7 @@ if (role === 'clerk' || role === 'admin' || role === 'master_clerk') {
         <button id="uploadTranscriptBtn" class="btn-secondary py-2 px-4 rounded-lg">Upload Transcript URL</button>
       </div>
     `;
-} else if (role === 'admin') {
+} else if (role === 'admin' || role === 'master_clerk') {
   roleSpecific = `
     <!-- ✅ NEW: New Filing Section (same as Clerk) -->
     <div class="card p-6 mb-6">
