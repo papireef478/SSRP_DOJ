@@ -36,9 +36,8 @@ async function renderDashboardByRole() {
     }
   }
   
-  // Tasks HTML (for roles that have tasks)
-  // ✅ FIX: Added 'master_clerk' + fixed typo in 'chief_justice'
-  const rolesWithTasks = ['clerk', 'judge', 'attorney', 'public_defender', 'district_attorney', 'bailiff', 'marshal', 'reporter', 'admin', 'master_clerk', 'chief_justice'];
+  // Tasks HTML (for roles that have tasks) - with null-safe data-id
+const rolesWithTasks = ['clerk', 'judge', 'attorney', 'public_defender', 'district_attorney', 'bailiff', 'marshal', 'reporter', 'admin', 'master_clerk', 'chief_justice'];
 const tasksHtml = rolesWithTasks.includes(role) ? `
   <div class="card p-6 mb-6">
     <div class="flex justify-between items-center mb-4">
@@ -48,16 +47,20 @@ const tasksHtml = rolesWithTasks.includes(role) ? `
       ${role === 'clerk' ? '<button id="refreshTasks" class="btn-secondary text-sm py-1 px-3 rounded-lg">Refresh</button>' : ''}
     </div>
     <ul id="tasksList" class="space-y-2">
-      ${tasks.length > 0 ? tasks.map(task => `
-        <li class="flex items-center gap-2">
-          <input type="checkbox" 
-                 ${task.status === 'done' ? 'checked' : ''} 
-                 data-id="${task.id || ''}" 
-                 class="task-checkbox">
-          <span class="flex-1">${task.task || 'Unnamed task'}</span>
-          <span class="text-xs text-gray-500">${task.due_date || task.due || task.frequency || ''}</span>
-        </li>
-      `).join('') : '<li class="text-gray-400 text-sm">No tasks assigned</li>'}
+      ${tasks.length > 0 ? tasks.map(task => {
+        // ✅ Ensure task.id exists and is valid
+        const taskId = task.id != null ? task.id : '';
+        return `
+          <li class="flex items-center gap-2">
+            <input type="checkbox" 
+                   ${task.status === 'done' ? 'checked' : ''} 
+                   data-id="${taskId}" 
+                   class="task-checkbox">
+            <span class="flex-1">${task.task || 'Unnamed task'}</span>
+            <span class="text-xs text-gray-500">${task.due_date || task.due || task.frequency || ''}</span>
+          </li>
+        `;
+      }).join('') : '<li class="text-gray-400 text-sm">No tasks assigned</li>'}
     </ul>
   </div>
 ` : '';
@@ -435,32 +438,54 @@ function attachDashboardEventListeners(role) {
     }
   });
   
-// Task checkboxes (clerk/admin/master_clerk) - with null safety
+// Task checkboxes (clerk/admin/master_clerk) - with comprehensive null safety
 document.querySelectorAll('.task-checkbox')?.forEach(cb => {
   cb.addEventListener('change', async () => {
-    if (role === 'clerk' || role === 'admin' || role === 'master_clerk') {
-      const taskId = cb.dataset.id;
-      
-      // ✅ Skip if no valid task ID
-      if (!taskId || taskId.trim() === '') {
-        console.warn('Task checkbox missing data-id, skipping update');
-        cb.checked = !cb.checked; // Revert UI
-        return;
-      }
-      
-      try {
-        await apiCall('updateClerkTask', {
-          id: parseInt(taskId, 10),
-          status: cb.checked ? 'done' : 'pending',
-          completed_by: currentUser.name
-        });
-        // ✅ Keep checkbox state as-is (no re-render flicker)
-      } catch (err) {
-        console.error('Failed to update task:', err);
-        // Revert checkbox on error
-        cb.checked = !cb.checked;
-        alert('❌ Failed to save task. Please check your connection and try again.');
-      }
+    // ✅ Check if user is logged in
+    if (!currentUser?.name) {
+      console.warn('User not logged in, cannot update task');
+      cb.checked = !cb.checked; // Revert UI
+      alert('⚠️ Please log in first to update tasks.');
+      return;
+    }
+    
+    // ✅ Check if role is authorized
+    if (role !== 'clerk' && role !== 'admin' && role !== 'master_clerk') {
+      console.warn('Role not authorized to update tasks:', role);
+      cb.checked = !cb.checked; // Revert UI
+      return;
+    }
+    
+    const taskId = cb.dataset.id;
+    
+    // ✅ Skip if no valid task ID
+    if (!taskId || taskId.trim() === '') {
+      console.warn('Task checkbox missing data-id, skipping update');
+      cb.checked = !cb.checked; // Revert UI
+      return;
+    }
+    
+    // ✅ Parse and validate task ID as number
+    const taskIdNum = parseInt(taskId, 10);
+    if (isNaN(taskIdNum) || taskIdNum <= 0) {
+      console.warn('Invalid task ID:', taskId);
+      cb.checked = !cb.checked; // Revert UI
+      alert('❌ Invalid task ID. Please refresh the page and try again.');
+      return;
+    }
+    
+    try {
+      await apiCall('updateClerkTask', {
+        id: taskIdNum,
+        status: cb.checked ? 'done' : 'pending',
+        completed_by: currentUser.name
+      });
+      // ✅ Keep checkbox state as-is (no re-render flicker)
+    } catch (err) {
+      console.error('Failed to update task:', err);
+      // Revert checkbox on error
+      cb.checked = !cb.checked;
+      alert('❌ Failed to save task: ' + (err.message || 'Please check your connection and try again.'));
     }
   });
 });
