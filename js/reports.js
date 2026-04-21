@@ -3,255 +3,35 @@
 // ============================================
 
 /**
- * Add a charge row to the report form
+ * Add a charge row to the report form with Penal Code dropdown
  * @param {string} containerId - Container element ID
+ * @param {Array} penalCodes - Array of penal code objects from API
  */
-function addChargeRow(containerId) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  
-  const row = document.createElement('div');
-  row.className = 'charge-row flex gap-2 mb-2';
-  row.innerHTML = `
-    <select class="chargeCode w-1/2 p-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-      <option value="">Select Penal Code</option>
-      <option value="(1)01">(1)01 Murder, First Degree</option>
-      <option value="(2)01">(2)01 Robbery</option>
-      <option value="(2)13">(2)13 Grand Theft Auto</option>
-    </select>
-    <textarea placeholder="Description" class="chargeDesc w-1/2 p-2 bg-gray-700 border border-gray-600 rounded-lg text-white" rows="1"></textarea>
-    <button type="button" class="remove-charge text-red-400 hover:text-red-300">✖</button>
-  `;
-  
-  container.appendChild(row);
-  
-  row.querySelector('.remove-charge').addEventListener('click', () => {
-    row.remove();
-    updateReportBail();
-  });
-  
-  row.querySelector('.chargeCode').addEventListener('change', updateReportBail);
-  
-  updateReportBail();
-}
-
-// ============================================================================
-// 🔹 CALCULATE BAIL FROM PENAL CODE FINE COLUMN
-// ============================================================================
-async function updateReportBail() {
-  let total = 0;
-  
-  // Fetch Penal Code data once (cache if needed)
-  try {
-    const pcResult = await apiCall('getPenalCode');
-    const penalCodes = pcResult.codes || [];
-    
-    // Create lookup map: code -> fine amount
-    const fineMap = {};
-    penalCodes.forEach(pc => {
-      const code = pc.Code || '';
-      const fine = parseFloat(pc['Fine ($)'] || pc.Fine || 0);
-      fineMap[code] = isNaN(fine) ? 0 : fine;
-    });
-    
-    // Calculate total from selected charges
-    document.querySelectorAll('.charge-row').forEach(row => {
-      const code = row.querySelector('.chargeCode')?.value || '';
-      const fine = fineMap[code] || 0;
-      total += fine;
-    });
-    
-  } catch (err) {
-    console.error('Failed to fetch Penal Code for bail calculation:', err);
-    // Fallback to old hardcoded method if API fails
-    document.querySelectorAll('.charge-row').forEach(row => {
-      const code = row.querySelector('.chargeCode')?.value || '';
-      if (code.includes('Murder')) total += 100000;
-      else if (code.includes('Robbery')) total += 50000;
-      else if (code.includes('Grand Theft Auto')) total += 25000;
-      else if (code) total += 25000;
-    });
-  }
-  
-  const bailInput = document.getElementById('bailTotal');
-  if (bailInput) {
-    bailInput.value = total;
-    bailInput.dataset.rawTotal = total; // Store raw value for formatting
-  }
-  return total;
-}
-// After updateReportBail() call, format the display:
-const bailInput = document.getElementById('bailTotal');
-if (bailInput) {
-  const raw = parseInt(bailInput.dataset.rawTotal || bailInput.value) || 0;
-  bailInput.value = '$' + raw.toLocaleString();
-}
-// ============================================================================
-// 🔹 ENHANCED CRIMINAL REPORT FORM (Police/PD → DA)
-// ============================================================================
-async function showCriminalReportForm(reportType) {
-  // Fetch Penal Code data
-  let penalCodes = [];
-  try {
-    const pcResult = await apiCall('getPenalCode');
-    penalCodes = pcResult.codes || [];
-  } catch (err) {
-    console.error('Failed to load Penal Code:', err);
-  }
-  
-  showModal(`
-    <div class="p-4">
-      <h3 class="text-xl font-bold mb-4 text-white">
-        ${reportType === 'police' ? '🚨 File Criminal Report (Police)' : '🛡️ Submit Criminal Report to DA (Public Defender)'}
-      </h3>
-      
-      <div class="space-y-4">
-        <!-- Defendant -->
-        <div>
-          <label class="block text-gray-300 mb-2 text-sm font-medium">Defendant Name:</label>
-          <input type="text" id="defendant" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="Enter defendant's character name" required>
-        </div>
-        
-        <!-- Case # (optional) -->
-        <div>
-          <label class="block text-gray-300 mb-2 text-sm font-medium">Case Number (optional):</label>
-          <input type="text" id="caseNo" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="e.g., CRIM-042">
-        </div>
-        
-        <!-- Charges Section -->
-        <div>
-          <label class="block text-gray-300 mb-2 text-sm font-medium">Charges:</label>
-          <div id="chargesContainer" class="space-y-2 mb-2"></div>
-          <button type="button" id="addChargeBtn" class="btn-secondary text-sm py-1 px-3 rounded-lg">+ Add Another Charge</button>
-        </div>
-        
-        <!-- Bail Total (auto-calculated) -->
-        <div>
-          <label class="block text-gray-300 mb-2 text-sm font-medium">Total Bail (calculated automatically):</label>
-          <input type="number" id="bailTotal" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" readonly>
-        </div>
-        
-        <!-- Evidence URLs -->
-        <div>
-          <label class="block text-gray-300 mb-2 text-sm font-medium">Evidence URLs (optional):</label>
-          <div id="evidenceUrlsContainer" class="space-y-2 mb-2">
-            <div class="flex gap-2">
-              <input type="url" name="evidenceUrl" class="flex-1 p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="https://example.com/evidence">
-              <button type="button" onclick="addEvidenceUrlField()" class="text-green-400 hover:text-green-300 text-xl font-bold" title="Add URL">+</button>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Bodycam URL (Police only) -->
-        ${reportType === 'police' ? `
-          <div>
-            <label class="block text-gray-300 mb-2 text-sm font-medium">Bodycam URL (optional):</label>
-            <input type="url" id="bodycamUrl" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="https://example.com/bodycam">
-          </div>
-        ` : ''}
-      </div>
-      
-      <div class="flex gap-3 justify-end mt-6">
-        <button id="submitReportBtn" class="btn-primary py-2 px-4 rounded-lg">Submit to DA</button>
-        <button onclick="closeModal('globalModal')" class="btn-secondary py-2 px-4 rounded-lg">Cancel</button>
-      </div>
-    </div>
-  `);
-  
-  // Initialize charge rows
-  addChargeRow('chargesContainer', penalCodes);
-  
-  // Add charge button
-  document.getElementById('addChargeBtn')?.addEventListener('click', () => {
-    addChargeRow('chargesContainer', penalCodes);
-  });
-  
-  // Submit handler
-  document.getElementById('submitReportBtn')?.addEventListener('click', async () => {
-    const defendant = document.getElementById('defendant')?.value?.trim();
-    const caseNo = document.getElementById('caseNo')?.value?.trim();
-    const bodycamUrl = reportType === 'police' ? document.getElementById('bodycamUrl')?.value?.trim() : '';
-    
-    // Collect charges
-    const charges = [];
-    document.querySelectorAll('.charge-row').forEach(row => {
-      const code = row.querySelector('.chargeCode')?.value;
-      const offense = row.querySelector('.chargeCode')?.options[row.querySelector('.chargeCode').selectedIndex]?.text || '';
-      const level = row.querySelector('.chargeCode')?.dataset?.level || '';
-      const bailAmount = parseInt(row.querySelector('.chargeCode')?.dataset?.bail || 0);
-      const desc = row.querySelector('.chargeDesc')?.value?.trim() || '';
-      
-      if (code) {
-        charges.push({
-          code,
-          offense: offense.split(' - ')[1] || offense,
-          level,
-          bailAmount,
-          description: desc
-        });
-      }
-    });
-    
-    // Collect evidence URLs
-    const evidenceUrls = [];
-    document.querySelectorAll('#evidenceUrlsContainer input[name="evidenceUrl"]').forEach(input => {
-      const url = input.value?.trim();
-      if (url && url.startsWith('http')) {
-        evidenceUrls.push(url);
-      }
-    });
-    
-    const bailTotal = parseInt(document.getElementById('bailTotal')?.value) || 0;
-    
-    if (!defendant || charges.length === 0) {
-      alert('Please enter defendant name and at least one charge.');
-      return;
-    }
-    
-    try {
-      await apiCall('submitReport', {
-        type: reportType,
-        defendant,
-        caseNo: caseNo || '',
-        charges,
-        bailTotal,
-        bodycamUrl: bodycamUrl || '',
-        evidenceUrls,
-        submittedBy: currentUser.name
-      });
-      
-      alert('✅ Report submitted to DA for review.');
-      closeModal('globalModal');
-      
-      // Notify DA
-      if (typeof sendNotificationToRole === 'function') {
-        sendNotificationToRole('district_attorney', `New ${reportType} report filed for ${defendant}`);
-      }
-    } catch (err) {
-      alert('❌ Failed to submit report: ' + (err.message || 'Unknown error'));
-    }
-  });
-}
-
-// ============================================================================
-// 🔹 ADD CHARGE ROW WITH PENAL CODE DROPDOWN
-// ============================================================================
 function addChargeRow(containerId, penalCodes = []) {
   const container = document.getElementById(containerId);
-  if (!container) return;
+  if (!container) {
+    console.error('Charge row container not found:', containerId);
+    return;
+  }
   
   const row = document.createElement('div');
   row.className = 'charge-row flex gap-2 mb-2 items-start';
   
-  // Build Penal Code options
-  const pcOptions = penalCodes.map(pc => `
-    <option value="${pc.Code || ''}" 
-            data-level="${pc.Level || ''}" 
-            data-bail="${pc.Fine || 0}"
-            data-offense="${pc.Offense || ''}">
-      ${pc.Code || ''} - ${pc.Offense || ''} (${pc.Level || ''}) - $${Number(pc.Fine || 0).toLocaleString()}
-    </option>
-  `).join('');
+  // Build Penal Code options with Fine $ data attribute
+  const pcOptions = penalCodes.map(pc => {
+    const code = pc.Code || '';
+    const offense = pc.Offense || '';
+    const level = pc.Level || '';
+    const fine = pc.Fine || pc['Fine ($)'] || 0;
+    const fineNum = typeof fine === 'string' ? parseFloat(fine.replace(/[^0-9.]/g, '')) || 0 : parseFloat(fine) || 0;
+    
+    return `<option 
+      value="${code}" 
+      data-level="${level}" 
+      data-bail="${fineNum}" 
+      data-offense="${offense}"
+    >${code} - ${offense} (${level}) - $${fineNum.toLocaleString()}</option>`;
+  }).join('');
   
   row.innerHTML = `
     <select class="chargeCode w-1/2 p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm">
@@ -265,14 +45,15 @@ function addChargeRow(containerId, penalCodes = []) {
   container.appendChild(row);
   
   // Remove handler
-  row.querySelector('.remove-charge').addEventListener('click', () => {
+  row.querySelector('.remove-charge')?.addEventListener('click', () => {
     row.remove();
     updateReportBail();
   });
   
-  // Bail calculation on change
-  row.querySelector('.chargeCode').addEventListener('change', updateReportBail);
+  // Bail calculation on change - pulls from data-bail attribute
+  row.querySelector('.chargeCode')?.addEventListener('change', updateReportBail);
   
+  // Initial bail calculation
   updateReportBail();
 }
 
@@ -281,7 +62,10 @@ function addChargeRow(containerId, penalCodes = []) {
 // ============================================================================
 function addEvidenceUrlField() {
   const container = document.getElementById('evidenceUrlsContainer');
-  if (!container) return;
+  if (!container) {
+    console.error('Evidence URLs container not found');
+    return;
+  }
   
   // Limit to 5 URLs max
   if (container.children.length >= 5) {
@@ -308,7 +92,7 @@ function removeEvidenceUrlField(btn) {
   const container = document.getElementById('evidenceUrlsContainer');
   if (!container || container.children.length <= 1) return;
   
-  btn.closest('.flex').remove();
+  btn.closest('.flex')?.remove();
   
   // Show/hide remove buttons
   container.querySelectorAll('button[onclick^="removeEvidenceUrlField"]').forEach(btn => {
@@ -317,17 +101,207 @@ function removeEvidenceUrlField(btn) {
 }
 
 // ============================================================================
-// 🔹 UPDATE BAIL TOTAL
+// 🔹 UPDATE BAIL TOTAL - Pulls from PenalCode Fine $ data attribute
 // ============================================================================
 function updateReportBail() {
   let total = 0;
+  
   document.querySelectorAll('.charge-row').forEach(row => {
-    const bail = parseInt(row.querySelector('.chargeCode')?.dataset?.bail || 0);
-    total += bail;
+    const select = row.querySelector('.chargeCode');
+    if (select && select.selectedIndex > 0) {
+      const selectedOption = select.options[select.selectedIndex];
+      const bail = parseFloat(selectedOption?.dataset?.bail || 0);
+      total += bail;
+    }
   });
+  
   const bailInput = document.getElementById('bailTotal');
-  if (bailInput) bailInput.value = total;
+  if (bailInput) {
+    bailInput.value = total;
+  }
+  
   return total;
+}
+
+// ============================================================================
+// 🔹 ENHANCED CRIMINAL REPORT FORM - Dynamic Bail from PenalCode
+// ============================================================================
+async function showCriminalReportForm(reportType) {
+  // Fetch Penal Code data for bail amounts
+  let penalCodes = [];
+  try {
+    const pcResult = await apiCall('getPenalCode');
+    penalCodes = pcResult.codes || [];
+  } catch (err) {
+    console.error('Failed to load Penal Code:', err);
+    alert('⚠️ Could not load Penal Code. Bail amounts may not calculate correctly.');
+  }
+  
+  const formTitle = reportType === 'police' 
+    ? '🚨 File Criminal Report (Police)' 
+    : '🛡️ Submit Criminal Report to DA (Public Defender)';
+  
+  showModal(`
+    <div class="p-4">
+      <h3 class="text-xl font-bold mb-4 text-white">${formTitle}</h3>
+      
+      <div class="space-y-4">
+        <!-- Defendant -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Defendant Name:</label>
+          <input type="text" id="defendant" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="Enter defendant's character name" required>
+        </div>
+        
+        <!-- Case # (optional) -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Case Number (optional):</label>
+          <input type="text" id="caseNo" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="e.g., CRIM-042">
+        </div>
+        
+        <!-- Charges Section -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Charges:</label>
+          <div id="chargesContainer" class="space-y-2 mb-2"></div>
+          <button type="button" id="addChargeBtn" class="btn-secondary text-sm py-1 px-3 rounded-lg">+ Add Another Charge</button>
+        </div>
+        
+        <!-- Bail Total (auto-calculated from PenalCode Fine $) -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Total Bail (calculated from Penal Code):</label>
+          <input type="number" id="bailTotal" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" readonly>
+        </div>
+        
+        <!-- Evidence URLs -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Evidence URLs (optional, max 5):</label>
+          <div id="evidenceUrlsContainer" class="space-y-2 mb-2">
+            <div class="flex gap-2">
+              <input type="url" name="evidenceUrl" class="flex-1 p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="https://example.com/evidence">
+              <button type="button" onclick="addEvidenceUrlField()" class="text-green-400 hover:text-green-300 text-xl font-bold" title="Add URL">+</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Bodycam URL (Police only) -->
+        ${reportType === 'police' ? `
+          <div>
+            <label class="block text-gray-300 mb-2 text-sm font-medium">Bodycam URL (optional):</label>
+            <input type="url" id="bodycamUrl" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="https://example.com/bodycam">
+          </div>
+        ` : ''}
+      </div>
+      
+      <div class="flex gap-3 justify-end mt-6">
+        <button id="submitReportBtn" class="btn-primary py-2 px-4 rounded-lg">Submit to DA</button>
+        <button onclick="closeModal('globalModal')" class="btn-secondary py-2 px-4 rounded-lg">Cancel</button>
+      </div>
+    </div>
+  `);
+  
+  // Initialize charge rows with PenalCode dropdown
+  addChargeRow('chargesContainer', penalCodes);
+  
+  // Add charge button
+  document.getElementById('addChargeBtn')?.addEventListener('click', () => {
+    addChargeRow('chargesContainer', penalCodes);
+  });
+  
+  // Submit handler
+  document.getElementById('submitReportBtn')?.addEventListener('click', async () => {
+    const defendantEl = document.getElementById('defendant');
+    const caseNoEl = document.getElementById('caseNo');
+    const bodycamUrlEl = document.getElementById('bodycamUrl');
+    const bailTotalEl = document.getElementById('bailTotal');
+    
+    const defendant = defendantEl?.value?.trim() || '';
+    const caseNo = caseNoEl?.value?.trim() || '';
+    const bodycamUrl = reportType === 'police' ? bodycamUrlEl?.value?.trim() || '' : '';
+    
+    // Collect charges with bail amounts from PenalCode
+    const charges = [];
+    document.querySelectorAll('.charge-row').forEach(row => {
+      const select = row.querySelector('.chargeCode');
+      const descInput = row.querySelector('.chargeDesc');
+      
+      if (select && select.value) {
+        const selectedOption = select.options[select.selectedIndex];
+        charges.push({
+          code: select.value,
+          offense: selectedOption?.dataset?.offense || subject.split(' - ')[1] || select.value,
+          level: selectedOption?.dataset?.level || '',
+          bailAmount: parseFloat(selectedOption?.dataset?.bail || 0),
+          description: descInput?.value?.trim() || ''
+        });
+      }
+    });
+    
+    // Collect evidence URLs
+    const evidenceUrls = [];
+    document.querySelectorAll('#evidenceUrlsContainer input[name="evidenceUrl"]').forEach(input => {
+      const url = input.value?.trim();
+      if (url && url.startsWith('http')) {
+        evidenceUrls.push(url);
+      }
+    });
+    
+    const bailTotal = parseFloat(bailTotalEl?.value) || 0;
+    
+    // Validation
+    if (!defendant) {
+      alert('❌ Please enter defendant name.');
+      defendantEl?.focus();
+      return;
+    }
+    
+    if (charges.length === 0) {
+      alert('❌ Please add at least one charge.');
+      return;
+    }
+    
+    // Disable button and show loading state
+    const submitBtn = document.getElementById('submitReportBtn');
+    const originalText = submitBtn?.innerHTML || 'Submit to DA';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '⏳ Submitting...';
+    }
+    
+    try {
+      await apiCall('submitReport', {
+        type: reportType,
+        defendant,
+        caseNo: caseNo || '',
+        charges,
+        bailTotal,
+        bodycamUrl: bodycamUrl || '',
+        evidenceUrls,
+        submittedBy: currentUser?.name || 'Unknown'
+      });
+      
+      alert('✅ Report submitted to DA for review.');
+      closeModal('globalModal');
+      
+      // Notify DA
+      if (typeof sendNotificationToRole === 'function') {
+        sendNotificationToRole('district_attorney', `New ${reportType} report filed for ${defendant}`);
+      }
+      
+      // Refresh dashboard if available
+      if (typeof renderDashboardByRole === 'function') {
+        await renderDashboardByRole();
+      }
+      
+    } catch (err) {
+      console.error('Failed to submit report:', err);
+      alert('❌ Failed to submit report: ' + (err.message || 'Unknown error'));
+    } finally {
+      // Re-enable button
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }
+    }
+  });
 }
 
 // ============================================================================
@@ -341,120 +315,166 @@ function showPDReportForm() {
   showCriminalReportForm('pd');
 }
 
-/**
- * Render DA Dashboard with pending reports
- * @returns {Promise<string>} HTML string
- */
+// ============================================================================
+// 🔹 RENDER DA DASHBOARD WITH PENDING REPORTS
+// ============================================================================
 async function renderDADashboard() {
+  let pendingReports = [];
+  
   try {
-    const [pending, charged] = await Promise.all([
-      apiCall('getPendingReports'),
-      apiCall('getChargedCases')
-    ]);
-    
-    const pendingHtml = pending.reports?.length === 0 
-      ? '<div class="text-gray-400">No pending reports</div>' 
-      : pending.reports.map(r => `
+    const reportsData = await apiCall('getPendingReports');
+    pendingReports = reportsData.reports || [];
+  } catch (err) {
+    console.error('Failed to load pending reports:', err);
+  }
+  
+  const pendingHtml = pendingReports.length === 0
+    ? '<div class="text-gray-400 text-sm">No pending reports</div>'
+    : pendingReports.map(r => {
+        const charges = Array.isArray(r.charges) ? r.charges : [];
+        const chargesText = charges.map(c => c.code || c).join(', ');
+        const submittedDate = r.timestamp ? new Date(r.timestamp).toLocaleDateString() : 'Unknown';
+        const submittedBy = r.submittedBy || 'Unknown';
+        
+        return `
           <div class="border border-gray-700 rounded p-3 mb-2" data-id="${r.id}">
             <div class="flex justify-between">
-              <div><strong>${r.defendant}</strong> (${r.type?.toUpperCase() || 'UNKNOWN'})</div>
-              <div>Bail: $${r.bailTotal || 0}</div>
+              <div>
+                <strong class="text-white">${r.defendant || 'Unknown'}</strong> 
+                <span class="text-gray-400">(${r.type?.toUpperCase() || 'UNKNOWN'})</span>
+              </div>
+              <div class="text-[#c9a227]">Bail: $${Number(r.bailTotal || 0).toLocaleString()}</div>
             </div>
-            <div class="text-sm text-gray-400">
-              Charges: ${(r.charges || []).map(c => c.code).join(', ')}
-            </div>
-            <div class="text-xs text-gray-500">
-              Submitted by ${r.submittedBy || 'Unknown'} on ${new Date(r.timestamp || Date.now()).toLocaleString()}
+            <div class="text-sm text-gray-400 mt-1">Charges: ${chargesText || 'None listed'}</div>
+            <div class="text-xs text-gray-500 mt-1">
+              Submitted by ${submittedBy} on ${submittedDate}
             </div>
             <div class="flex gap-2 mt-2">
-              <button class="btn-primary text-sm py-1 px-2 rounded approve-report" data-id="${r.id}">Approve & File Charges</button>
-              <button class="btn-secondary text-sm py-1 px-2 rounded edit-report" data-id="${r.id}">Edit</button>
-              <button class="btn-secondary text-sm py-1 px-2 rounded deny-report" data-id="${r.id}">Deny</button>
+              <button class="btn-primary text-sm py-1 px-2 rounded approve-report" data-id="${r.id}">
+                Approve & File Charges
+              </button>
+              <button class="btn-secondary text-sm py-1 px-2 rounded text-red-400 deny-report" data-id="${r.id}">
+                Deny
+              </button>
             </div>
           </div>
-        `).join('');
-    
-    const chargedHtml = charged.cases?.length === 0 
-      ? '<div class="text-gray-400">No charged cases yet</div>' 
-      : charged.cases.map(c => `
-          <div class="border border-green-700 rounded p-3 mb-2">
-            <div><strong>${c.defendant}</strong> (Case #: ${c.caseNo || 'TBD'})</div>
-            <div>Charges: ${(c.charges || []).map(ch => ch.code).join(', ')}</div>
-            <div>Bail: $${c.bailTotal || 0}</div>
-            <div class="text-xs text-gray-500">
-              Approved by ${c.approvedBy || 'Unknown'} on ${new Date(c.approvedAt || Date.now()).toLocaleString()}
-            </div>
-          </div>
-        `).join('');
-    
-    return `
-      <div class="grid md:grid-cols-2 gap-6">
-        <div class="card p-6">
-          <h3 class="text-lg font-semibold text-[#facc15] mb-3">Pending Reports</h3>
-          <div id="pendingReportsList" class="max-h-96 overflow-y-auto">${pendingHtml}</div>
-        </div>
-        <div class="card p-6">
-          <h3 class="text-lg font-semibold text-[#facc15] mb-3">Charged Cases</h3>
-          <div id="chargedCasesList" class="max-h-96 overflow-y-auto">${chargedHtml}</div>
-        </div>
+        `;
+      }).join('');
+  
+  return `
+    <div class="card p-6 mb-6">
+      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+        <i data-lucide="file-text"></i> Pending Reports
       </div>
-      <div class="card p-6 mt-6">
-        <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
-          <i data-lucide="message-square"></i> Communications
-        </div>
-        <button id="sendToPoliceBtn" class="btn-secondary py-2 px-4 rounded-lg">Send Message to Police</button>
+      <div id="pendingReportsList" class="space-y-2">
+        ${pendingHtml}
       </div>
-    `;
-  } catch (err) {
-    console.error('Failed to load DA dashboard:', err);
-    return '<div class="text-red-400">Failed to load dashboard data</div>';
-  }
+    </div>
+    <div class="card p-6 mb-6">
+      <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+        <i data-lucide="settings"></i> Actions
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <button id="daFileChargesBtn" class="btn-secondary py-2 px-4 rounded-lg">File Charges</button>
+        <button id="daRequestEvidenceBtn" class="btn-secondary py-2 px-4 rounded-lg">Request Evidence</button>
+      </div>
+    </div>
+  `;
 }
 
-/**
- * Attach DA dashboard event listeners
- */
+// ============================================================================
+// 🔹 ATTACH DA DASHBOARD EVENT LISTENERS
+// ============================================================================
 function attachDAEventListeners() {
+  // Approve report buttons
   document.querySelectorAll('.approve-report').forEach(btn => {
-    btn.addEventListener('click', async () => {
+    btn?.addEventListener('click', async () => {
       const id = parseInt(btn.dataset.id);
-      const caseNo = prompt('Enter Case Number (or leave blank to auto-generate):');
+      if (isNaN(id)) {
+        alert('❌ Invalid report ID');
+        return;
+      }
+      
+      const caseNo = prompt('Enter Case Number (or leave blank to auto-generate):', '');
       
       try {
         await apiCall('approveReport', {
           id,
-          approved_by: currentUser.name,
+          approved_by: currentUser?.name || 'Unknown',
           caseNo: caseNo || undefined
         });
-        alert('Report approved. Clerk will be notified.');
-        renderDashboardByRole();
+        
+        alert('✅ Report approved. Clerk will be notified.');
+        
+        // Refresh dashboard
+        if (typeof renderDashboardByRole === 'function') {
+          await renderDashboardByRole();
+        }
+        
       } catch (err) {
-        alert('Failed to approve report: ' + err.message);
+        console.error('Failed to approve report:', err);
+        alert('❌ Failed to approve report: ' + (err.message || 'Unknown error'));
       }
     });
   });
   
+  // Deny report buttons
   document.querySelectorAll('.deny-report').forEach(btn => {
-    btn.addEventListener('click', async () => {
+    btn?.addEventListener('click', async () => {
       const id = parseInt(btn.dataset.id);
+      if (isNaN(id)) {
+        alert('❌ Invalid report ID');
+        return;
+      }
+      
+      if (!confirm('Are you sure you want to deny this report?')) {
+        return;
+      }
       
       try {
         await apiCall('denyReport', { id });
-        alert('Report denied.');
-        renderDashboardByRole();
+        
+        alert('✅ Report denied.');
+        
+        // Refresh dashboard
+        if (typeof renderDashboardByRole === 'function') {
+          await renderDashboardByRole();
+        }
+        
       } catch (err) {
-        alert('Failed to deny report: ' + err.message);
+        console.error('Failed to deny report:', err);
+        alert('❌ Failed to deny report: ' + (err.message || 'Unknown error'));
       }
     });
   });
   
-  document.querySelectorAll('.edit-report').forEach(btn => {
-    btn.addEventListener('click', () => {
-      alert('Edit functionality coming soon.');
-    });
+  // File charges button (placeholder)
+  document.getElementById('daFileChargesBtn')?.addEventListener('click', () => {
+    alert('File charges form (coming soon)');
   });
   
+  // Request evidence button (placeholder)
+  document.getElementById('daRequestEvidenceBtn')?.addEventListener('click', () => {
+    alert('Request evidence form (coming soon)');
+  });
+  
+  // Send to Police button (if exists)
   document.getElementById('sendToPoliceBtn')?.addEventListener('click', () => {
-    showCommunicationModal('police', 'Police');
+    if (typeof showCommunicationModal === 'function') {
+      showCommunicationModal('police', 'Police');
+    }
   });
 }
+
+// ============================================================================
+// 🔹 MAKE FUNCTIONS GLOBALLY ACCESSIBLE
+// ============================================================================
+window.addChargeRow = addChargeRow;
+window.addEvidenceUrlField = addEvidenceUrlField;
+window.removeEvidenceUrlField = removeEvidenceUrlField;
+window.updateReportBail = updateReportBail;
+window.showCriminalReportForm = showCriminalReportForm;
+window.showPoliceReportForm = showPoliceReportForm;
+window.showPDReportForm = showPDReportForm;
+window.renderDADashboard = renderDADashboard;
+window.attachDAEventListeners = attachDAEventListeners;
