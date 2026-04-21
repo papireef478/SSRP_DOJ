@@ -14,25 +14,28 @@ function closeModal(modalId) {
 }
 
 /**
- * Show a modal with custom content
- * @param {string} contentHtml - HTML content to display
- */
+Show a modal with custom content
+@param {string} contentHtml - HTML content to display
+*/
 function showModal(contentHtml) {
+  if (!contentHtml || contentHtml.trim() === '') {
+    console.warn('showModal() called with empty content. Ignoring.');
+    return;
+  }
+  
   const modal = document.getElementById('globalModal');
   const modalContent = document.getElementById('modalContent');
   
   if (modal && modalContent) {
-    // ✅ Wrap content in a scrollable container for long forms
-    modalContent.innerHTML = `<div class="modal-scroll-container"> ${contentHtml} </div>`;
+    modalContent.innerHTML = `<div class="modal-scroll-container">${contentHtml}</div>`;
     modal.classList.remove('hidden');
     
     // Close on overlay click
     modal.onclick = (e) => {
-      if (e.target === modal) {
-        closeModal('globalModal');
-      }
+      if (e.target === modal) closeModal('globalModal');
     };
   }
+}
 }
 
 /**
