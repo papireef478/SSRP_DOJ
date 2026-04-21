@@ -35,26 +35,57 @@ function addChargeRow(containerId) {
   updateReportBail();
 }
 
-/**
- * Calculate total bail from charges
- */
-function updateReportBail() {
+// ============================================================================
+// 🔹 CALCULATE BAIL FROM PENAL CODE FINE COLUMN
+// ============================================================================
+async function updateReportBail() {
   let total = 0;
   
-  document.querySelectorAll('.charge-row').forEach(row => {
-    const code = row.querySelector('.chargeCode')?.value || '';
-    if (code.includes('Murder')) total += 100000;
-    else if (code.includes('Robbery')) total += 50000;
-    else if (code.includes('Grand Theft Auto')) total += 25000;
-    else if (code) total += 25000;
-  });
+  // Fetch Penal Code data once (cache if needed)
+  try {
+    const pcResult = await apiCall('getPenalCode');
+    const penalCodes = pcResult.codes || [];
+    
+    // Create lookup map: code -> fine amount
+    const fineMap = {};
+    penalCodes.forEach(pc => {
+      const code = pc.Code || '';
+      const fine = parseFloat(pc['Fine ($)'] || pc.Fine || 0);
+      fineMap[code] = isNaN(fine) ? 0 : fine;
+    });
+    
+    // Calculate total from selected charges
+    document.querySelectorAll('.charge-row').forEach(row => {
+      const code = row.querySelector('.chargeCode')?.value || '';
+      const fine = fineMap[code] || 0;
+      total += fine;
+    });
+    
+  } catch (err) {
+    console.error('Failed to fetch Penal Code for bail calculation:', err);
+    // Fallback to old hardcoded method if API fails
+    document.querySelectorAll('.charge-row').forEach(row => {
+      const code = row.querySelector('.chargeCode')?.value || '';
+      if (code.includes('Murder')) total += 100000;
+      else if (code.includes('Robbery')) total += 50000;
+      else if (code.includes('Grand Theft Auto')) total += 25000;
+      else if (code) total += 25000;
+    });
+  }
   
   const bailInput = document.getElementById('bailTotal');
-  if (bailInput) bailInput.value = total;
-  
+  if (bailInput) {
+    bailInput.value = total;
+    bailInput.dataset.rawTotal = total; // Store raw value for formatting
+  }
   return total;
 }
-
+// After updateReportBail() call, format the display:
+const bailInput = document.getElementById('bailTotal');
+if (bailInput) {
+  const raw = parseInt(bailInput.dataset.rawTotal || bailInput.value) || 0;
+  bailInput.value = '$' + raw.toLocaleString();
+}
 // ============================================================================
 // 🔹 ENHANCED CRIMINAL REPORT FORM (Police/PD → DA)
 // ============================================================================
