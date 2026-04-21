@@ -67,17 +67,18 @@ async function renderDashboardByRole() {
           // ✅ Ensure task.id exists and is valid number
           const taskId = task.id != null && !isNaN(parseInt(task.id)) ? parseInt(task.id) : '';
           // ✅ Format due_date properly
-          const dueDisplay = formatDateForDisplay(task.due_date || task.due || task.frequency || '');
-          return `
-            <li class="flex items-center gap-2">
-              <input type="checkbox" 
-                     ${task.status === 'done' ? 'checked' : ''} 
-                     data-id="${taskId}" 
-                     class="task-checkbox">
-              <span class="flex-1">${task.task || 'Unnamed task'}</span>
-              <span class="text-xs text-gray-500">${dueDisplay}</span>
-            </li>
-          `;
+return `
+  <li class="flex items-center gap-2">
+    <input type="checkbox" 
+           ${task.status === 'done' ? 'checked' : ''} 
+           data-id="${task.id != null && !isNaN(parseInt(task.id)) ? parseInt(task.id) : ''}" 
+           class="task-checkbox">
+    <span class="flex-1">${task.task || 'Unnamed task'}</span>
+    <span class="text-xs text-gray-500">
+      ${formatDateForDisplay(task.due_date || task.due || '')}${task.frequency ? ` • ${task.frequency}` : ''}
+    </span>
+  </li>
+`;
         }).join('') : '<li class="text-gray-400 text-sm">No tasks assigned</li>'}
       </ul>
     </div>
@@ -444,8 +445,8 @@ function attachDashboardEventListeners(role) {
                 <input type="checkbox" ${task.status === 'done' ? 'checked' : ''} data-id="${task.id}" class="task-checkbox">
                 <span class="flex-1">${task.task}</span>
                 <span class="text-xs text-gray-500">
-                  ${formatDateForDisplay(task.due_date || task.due || task.frequency || '')}
-                </span>
+  ${formatDateForDisplay(task.due_date || task.due || '')}${task.frequency ? ` • ${task.frequency}` : ''}
+</span>
               </li>
             `).join('');
           }
