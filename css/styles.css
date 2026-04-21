@@ -257,6 +257,103 @@ input::placeholder, textarea::placeholder {
   from { opacity: 0; max-height: 0; }
   to { opacity: 1; max-height: 1000px; }
 }
+/* ============================================
+🔧 MODAL SCROLLING FIX - Prevent cut-off content
+============================================ */
+
+/* Modal container - limit height and enable scrolling */
+#globalModal .p-4 {
+  max-height: 85vh; /* Never exceed 85% of viewport height */
+  overflow-y: auto; /* Enable vertical scrolling inside modal */
+  padding: 1rem !important; /* Ensure padding doesn't add extra height */
+}
+
+/* Ensure modal content wrapper is flexible */
+#globalModal {
+  display: flex;
+  align-items: center; /* Vertically center */
+  justify-content: center; /* Horizontally center */
+  padding: 1rem; /* Add padding so modal doesn't touch edges on small screens */
+}
+
+/* Modal content box - constrain width for readability */
+#globalModal .p-4 > div:first-child,
+#globalModal .p-4 > form,
+#globalModal .p-4 > .space-y-4 {
+  max-width: 600px; /* Prevent overly wide modals */
+  margin: 0 auto; /* Center content */
+}
+
+/* Form inputs - prevent overflow */
+#globalModal input[type="text"],
+#globalModal input[type="url"],
+#globalModal input[type="number"],
+#globalModal textarea,
+#globalModal select {
+  width: 100%;
+  box-sizing: border-box; /* Include padding in width calculation */
+  max-width: 100%;
+}
+
+/* Textarea - limit height and enable scrolling */
+#globalModal textarea {
+  min-height: 80px;
+  max-height: 150px;
+  resize: vertical;
+  overflow-y: auto;
+}
+
+/* Checkbox labels - wrap text properly */
+#globalModal label.flex {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+#globalModal label.flex input[type="checkbox"] {
+  margin-top: 0.25rem;
+  flex-shrink: 0;
+}
+
+#globalModal label.flex span {
+  flex: 1;
+  min-width: 0; /* Allow text to wrap */
+}
+
+/* Button group - prevent horizontal overflow */
+#globalModal .flex.gap-3.justify-end {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Responsive: Smaller screens */
+@media (max-width: 768px) {
+  #globalModal .p-4 {
+    max-height: 90vh; /* Slightly more height on mobile */
+    padding: 0.75rem !important;
+  }
+  
+  #globalModal .p-4 > div:first-child,
+  #globalModal .p-4 > form,
+  #globalModal .p-4 > .space-y-4 {
+    max-width: 100%;
+  }
+  
+  /* Stack buttons vertically on mobile */
+  #globalModal .flex.gap-3.justify-end {
+    flex-direction: column-reverse;
+  }
+  
+  #globalModal .flex.gap-3.justify-end button {
+    width: 100%;
+  }
+}
+
+/* Ensure modal overlay doesn't block scrolling */
+.modal-overlay {
+  overflow: hidden; /* Prevent body scroll when modal is open */
+}
 
 /* ============================================
    SPLASH SCREEN
