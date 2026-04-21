@@ -129,6 +129,7 @@ function showRecusalModal() {
         reason: reason || '',
         evidenceUrl: evidenceUrl || ''
       };
+if (!payload.caseId) { alert('Case # required'); return; }
       
       await apiCall('submitRecusal', payload);
       
