@@ -1005,6 +1005,9 @@ async function renderDashboardByRole() {
         </div>
         <p class="text-gray-300 mb-4">File criminal reports for review by the District Attorney.</p>
       </div>
+      <button id="policeReportBtn" class="btn-secondary py-2 px-4 rounded-lg">
+  Submit Criminal Report to DA
+</button>
     `;
   } else if (role === 'bailiff') {
     roleSpecific = `
