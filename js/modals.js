@@ -14,9 +14,9 @@ function closeModal(modalId) {
 }
 
 /**
-Show a modal with custom content
-@param {string} contentHtml - HTML content to display
-*/
+ * Show a modal with custom content
+ * @param {string} contentHtml - HTML content to display
+ */
 function showModal(contentHtml) {
   const modal = document.getElementById('globalModal');
   const modalContent = document.getElementById('modalContent');
@@ -34,6 +34,7 @@ function showModal(contentHtml) {
     };
   }
 }
+
 /**
  * Show Quick Guide modal
  */
