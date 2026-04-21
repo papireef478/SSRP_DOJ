@@ -15,9 +15,16 @@ function formatDateForDisplay(dateStr) {
 }
 
 // ============================================================================
-// 🔹 RECUSAL REQUEST MODAL
+// 🔹 RECUSAL REQUEST MODAL - ROLE-SPECIFIC LABELS
 // ============================================================================
 function showRecusalModal() {
+  // Get current role and format for display
+  const currentRole = currentUser?.role || 'user';
+  const roleDisplay = currentRole
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+  
   showModal(`
     <div class="p-4">
       <h3 class="text-xl font-bold mb-4 text-white">⚖️ Motion for Recusal</h3>
@@ -29,29 +36,29 @@ function showRecusalModal() {
           <input type="text" id="recusalCaseId" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="e.g., CIV-001, CRIM-042" required>
         </div>
         
-        <!-- Grounds for Recusal -->
+        <!-- Grounds for Recusal - DYNAMIC ROLE LABELS -->
         <div>
           <label class="block text-gray-300 mb-2 text-sm font-medium">Grounds for Recusal:</label>
           <div class="space-y-2">
             <label class="flex items-center gap-2 text-sm text-gray-300">
               <input type="checkbox" id="groundPersonal" class="rounded bg-gray-700 border-gray-600">
-              Judge has personal involvement in case
+              ${roleDisplay} has personal involvement in case
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-300">
               <input type="checkbox" id="groundCharacter" class="rounded bg-gray-700 border-gray-600">
-              Judge's OTHER CHARACTER is involved in this matter
+              ${roleDisplay}'s OTHER CHARACTER is involved in this matter
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-300">
               <input type="checkbox" id="groundBias" class="rounded bg-gray-700 border-gray-600">
-              Judge has bias or prejudice
+              ${roleDisplay} has bias or prejudice
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-300">
               <input type="checkbox" id="groundFinancial" class="rounded bg-gray-700 border-gray-600">
-              Judge has financial interest
+              ${roleDisplay} has financial interest
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-300">
               <input type="checkbox" id="groundPrior" class="rounded bg-gray-700 border-gray-600">
-              Judge has prior involvement as attorney
+              ${roleDisplay} has prior involvement as attorney
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-300">
               <input type="checkbox" id="groundAppearance" class="rounded bg-gray-700 border-gray-600">
