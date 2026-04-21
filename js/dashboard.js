@@ -30,7 +30,7 @@ async function getBailAmountForCode(penalCode) {
 }
 
 // ============================================================================
-// 🔹 RECUSAL REQUEST MODAL - Dynamic Role Text
+// 🔹 RECUSAL REQUEST MODAL - Dynamic Role Text + Fixed Backend Call
 // ============================================================================
 function showRecusalModal() {
   // Get current user's role for dynamic text
@@ -122,6 +122,7 @@ function showRecusalModal() {
     const reason = grounds.join('; ') + (explanation ? ` | ${explanation}` : '');
     
     try {
+      // ✅ FIXED: Use correct backend action name
       await apiCall('submitRecusal', {
         caseId,
         requestor: currentUser.name,
@@ -137,13 +138,14 @@ function showRecusalModal() {
         sendNotificationToRole(currentUser.name, `Your recusal motion for case ${caseId} has been submitted.`);
       }
     } catch (err) {
+      console.error('Recusal submit error:', err);
       alert('❌ Failed to submit recusal: ' + (err.message || 'Unknown error'));
     }
   });
 }
 
 // ============================================================================
-// 🔹 OFFICIAL LETTER MODAL - Fixed Preview + URL Field
+// 🔹 OFFICIAL LETTER MODAL - Fixed Preview + Validation + Multi-URL Support
 // ============================================================================
 function showOfficialLetterModal() {
   showModal(`
@@ -151,10 +153,11 @@ function showOfficialLetterModal() {
       <h3 class="text-xl font-bold mb-4 text-white">✉️ Official Letter</h3>
       
       <div class="space-y-4">
-        <!-- Case # (auto-filled from judge's cases) -->
+        <!-- Case # (REQUIRED) -->
         <div>
-          <label class="block text-gray-300 mb-2 text-sm font-medium">Case Number:</label>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Case Number: <span class="text-red-400">*</span></label>
           <input type="text" id="letterCaseNo" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="e.g., CIV-001, CRIM-042" required>
+          <p class="text-xs text-gray-500 mt-1">Case # is required to link this letter to the correct case.</p>
         </div>
         
         <!-- Letter Type -->
@@ -172,14 +175,15 @@ function showOfficialLetterModal() {
         
         <!-- Content -->
         <div>
-          <label class="block text-gray-300 mb-2 text-sm font-medium">Letter Content:</label>
-          <textarea id="letterContent" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white h-32" placeholder="Enter the official letter content..."></textarea>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Letter Content: <span class="text-red-400">*</span></label>
+          <textarea id="letterContent" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white h-32" placeholder="Enter the official letter content..." required></textarea>
         </div>
         
-        <!-- Additional URL Link -->
+        <!-- Additional URL Link (optional) -->
         <div>
           <label class="block text-gray-300 mb-2 text-sm font-medium">Additional Info URL (optional):</label>
           <input type="url" id="letterUrl" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="https://example.com/additional-info">
+          <p class="text-xs text-gray-500 mt-1">This URL will be saved with the letter in the CaseRegistry.</p>
         </div>
         
         <!-- Signature -->
@@ -258,8 +262,14 @@ function showOfficialLetterModal() {
     const additionalUrl = document.getElementById('letterUrl')?.value?.trim();
     const signature = document.getElementById('letterSignature')?.value?.trim() || currentUser.name;
     
-    if (!caseNo || !letterType || !content) {
-      alert('Please fill in Case #, Letter Type, and Content.');
+    // ✅ VALIDATION: Case # is required
+    if (!caseNo) {
+      alert('❌ Case Number is required. Please enter a valid Case # to link this letter.');
+      return;
+    }
+    
+    if (!letterType || !content) {
+      alert('Please fill in Letter Type and Content.');
       return;
     }
     
@@ -323,14 +333,14 @@ function showOfficialLetterModal() {
         letterType,
         content,
         signature,
-        additionalUrl: additionalUrl || '',
+        letterUrl: additionalUrl || '',
         letterHtml,
         judgeName: currentUser.name,
         folderId: '15H4kUlsoOOpblHvg6HVjdQXZgGUAGBVI' // Official Letters folder
       });
       
       if (result.success && result.driveUrl) {
-        alert(`✅ Official letter generated and uploaded!\n\n📁 Drive Link: ${result.driveUrl}\n\nThe CaseRegistry has been updated with this letter URL.`);
+        alert(`✅ Official letter generated and uploaded!\n\n📁 Drive Link: ${result.driveUrl}\n\nThe CaseRegistry has been updated with this letter URL in the next available Official Letter URL column.`);
         closeModal('globalModal');
         
         // Notify relevant parties
@@ -888,6 +898,7 @@ async function renderDashboardByRole() {
       </div>
     `;
   } else if (role === 'judge') {
+    // ✅ REMOVED: sentencingBtn - Official Letter covers court rulings
     roleSpecific = `
       <div class="card p-6 mb-6">
         <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
@@ -903,7 +914,6 @@ async function renderDashboardByRole() {
         </div>
         <div class="flex flex-wrap gap-3">
           <button id="recusalBtn" class="btn-secondary py-2 px-4 rounded-lg">Recusal Request</button>
-          <button id="sentencingBtn" class="btn-secondary py-2 px-4 rounded-lg">Submit Sentencing</button>
           <button id="officialLetterBtn" class="btn-secondary py-2 px-4 rounded-lg">Official Letter</button>
         </div>
       </div>
@@ -1267,10 +1277,7 @@ function attachDashboardEventListeners(role) {
       }
     });
     
-    // ✅ Sentencing button (placeholder for now)
-    document.getElementById('sentencingBtn')?.addEventListener('click', () => {
-      alert('📝 Sentencing form (coming soon)\n\nThis will allow you to upload professional sentencing letters to the Drive folder and update the CaseRegistry.');
-    });
+    // ✅ REMOVED: sentencingBtn - Official Letter covers court rulings
     
     // ✅ Official Letter button - use new modal with fixed preview
     document.getElementById('officialLetterBtn')?.addEventListener('click', () => {
@@ -1676,7 +1683,7 @@ window.attachDAEventListeners = attachDAEventListeners;
 window.showRecusalQueue = showRecusalQueue;
 window.submitRecusal = submitRecusal; // Keep for backward compatibility
 window.showRecusalModal = showRecusalModal; // NEW: Full recusal modal with dynamic role
-window.showOfficialLetterModal = showOfficialLetterModal; // NEW: Fixed preview + URL field
+window.showOfficialLetterModal = showOfficialLetterModal; // NEW: Fixed preview + URL field + validation
 window.showTrustRequestModal = showTrustRequestModal; // NEW: Trust account requests
 window.renderTrustRequests = renderTrustRequests; // NEW: Render trust requests for clerks
 window.respondToTrustRequest = respondToTrustRequest; // NEW: Respond to trust requests
