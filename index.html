@@ -150,22 +150,37 @@
   </div>
 
   <!-- ✅ JavaScript Files - Load in CORRECT order (NO type="module") -->
-  <script src="js/config.js"></script>
-  <script src="js/utils.js"></script>
-  <script src="js/api.js"></script>
-  <script src="js/modals.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/communication.js"></script>
-  <script src="js/notifications.js"></script>
-  <script src="js/home.js"></script>
-  <script src="js/dashboard.js"></script>
-  <script src="js/navigation.js"></script>
-  <script src="js/sheets.js"></script>
-  <script src="js/availability.js"></script>
-  <script src="js/reports.js"></script>
-  <script src="js/public-records.js"></script>
-  <script src="js/penal-code.js"></script>
-  <script src="js/careers.js"></script>
+<!-- 1. CONFIG & UTILS (load first) -->
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+
+<!-- 2. API LAYER (needed by everything) -->
+<script src="js/api.js"></script>
+
+<!-- 3. UI COMPONENTS (modals, notifications, communication) -->
+<script src="js/modals.js"></script>
+<script src="js/notifications.js"></script>
+<script src="js/communication.js"></script>
+
+<!-- 4. AUTH (depends on api.js, utils.js) -->
+<script src="js/auth.js"></script>
+
+<!-- 5. DASHBOARD (MUST load before navigation.js - defines renderDashboardByRole) -->
+<script src="js/dashboard.js"></script>
+
+<!-- 6. NAVIGATION (depends on dashboard.js for renderDashboardByRole) -->
+<script src="js/navigation.js"></script>
+
+<!-- 7. FEATURE MODULES (depend on api.js, auth, dashboard) -->
+<script src="js/availability.js"></script>
+<script src="js/reports.js"></script>
+<script src="js/sheets.js"></script>
+
+<!-- 8. PAGE CONTENT (load last - independent) -->
+<script src="js/home.js"></script>
+<script src="js/public-records.js"></script>
+<script src="js/penal-code.js"></script>
+<script src="js/careers.js"></script>
     
   <!-- Initialize after all scripts load -->
   <script>
