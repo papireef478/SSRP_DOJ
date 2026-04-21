@@ -1,4 +1,8 @@
 // ============================================================================
+// COMMUNICATION SYSTEM - ROLE-BASED MESSAGING
+// ============================================================================
+
+// ============================================================================
 // 🔹 HELPER: Fetch DOJ users by role from backend (CORS-friendly)
 // ============================================================================
 async function fetchDOJUsersByRole(roleFilter) {
@@ -8,9 +12,8 @@ async function fetchDOJUsersByRole(roleFilter) {
     const url = `${API_URL}?action=getDOJUsers&role=${encodeURIComponent(actualRole)}`;
     const response = await fetch(url);
     const result = await response.json();
-    
     let users = result.success ? result.users : [];
-    
+
     // ✅ If filtering for clerk_or_admin, ALSO include admin/master_clerk users
     if (roleFilter === 'clerk_or_admin') {
       const adminUrl = `${API_URL}?action=getDOJUsers&role=admin`;
@@ -20,7 +23,7 @@ async function fetchDOJUsersByRole(roleFilter) {
         users = [...users, ...adminResult.users];
       }
     }
-    
+
     return users;
   } catch (err) {
     console.error('Failed to fetch users:', err);
@@ -29,7 +32,7 @@ async function fetchDOJUsersByRole(roleFilter) {
 }
 
 // ============================================================================
-// 🔹 DYNAMIC URL FIELDS: +/- buttons for multiple URLs
+// 🔹 DYNAMIC URL FIELDS: +/- buttons for multiple URLs (MAX 2)
 // ============================================================================
 function addUrlField() {
   const container = document.getElementById('urlFieldsContainer');
@@ -43,9 +46,11 @@ function addUrlField() {
   
   const div = document.createElement('div');
   div.className = 'flex gap-2 items-center animate-fade-in';
-  div.innerHTML = `<input type="url" name="messageUrl" class="flex-1 p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="https://example.com"> 
-<button type="button" onclick="addUrlField()" class="text-green-400 hover:text-green-300 text-xl font-bold" title="Add URL">+</button> 
-<button type="button" onclick="removeUrlField(this)" class="text-red-400 hover:text-red-300 text-xl font-bold" title="Remove">×</button>`;
+  div.innerHTML = `
+    <input type="url" name="messageUrl" class="flex-1 p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="https://example.com">
+    <button type="button" onclick="addUrlField()" class="text-green-400 hover:text-green-300 text-xl font-bold" title="Add URL">+</button>
+    <button type="button" onclick="removeUrlField(this)" class="text-red-400 hover:text-red-300 text-xl font-bold" title="Remove">×</button>
+  `;
   
   container.appendChild(div);
   
@@ -141,9 +146,9 @@ function showCommunicationModal(targetRole, targetLabel) {
         <textarea id="messageBody" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white h-32" placeholder="${isReplyMode ? 'Type your reply...' : 'Type your message...'}"></textarea>
       </div>
       
-      <!-- ✅ MULTI-URL FIELDS WITH +/- BUTTONS -->
+      <!-- ✅ MULTI-URL FIELDS WITH +/- BUTTONS (MAX 2) -->
       <div class="mb-4">
-        <label class="block text-gray-300 mb-2 text-sm font-medium">URL Links (optional):</label>
+        <label class="block text-gray-300 mb-2 text-sm font-medium">URL Links (optional, max 2):</label>
         <div id="urlFieldsContainer" class="space-y-2">
           <div class="flex gap-2 items-center">
             <input type="url" name="messageUrl" class="flex-1 p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="https://example.com">
@@ -229,7 +234,7 @@ function showCommunicationModal(targetRole, targetLabel) {
 }
 
 // ============================================================================
-// 🔹 SETUP SEND BUTTON HANDLER — REPLACEMENT CODE
+// 🔹 SETUP SEND BUTTON HANDLER
 // ============================================================================
 function setupSendMessageHandler(targetRole, targetLabel, isReplyMode) {
   document.getElementById('sendMessageBtn')?.addEventListener('click', async () => {
@@ -250,22 +255,28 @@ function setupSendMessageHandler(targetRole, targetLabel, isReplyMode) {
       const urlsArray = Array.from(urlInputs)
         .map(input => input.value?.trim())
         .filter(url => url && url.startsWith('http'));
-     
+      
       // ✅ VALIDATION: Limit to 2 URLs max
       if (urlsArray.length > 2) {
         alert('⚠️ Maximum 2 URL links allowed per message. Please remove excess links.');
         sendBtn.disabled = false;
         sendBtn.innerHTML = originalBtnText;
         return;
-      }     
+      }
       
       // Validation
       if (!currentUser?.name) {
         alert('⚠️ Please log in first to send messages.');
         return;
       }
-      if (!body) { alert('Please enter a message.'); return; }
-      if (!recipient && !isReplyMode) { alert('Please select a recipient.'); return; }
+      if (!body) {
+        alert('Please enter a message.');
+        return;
+      }
+      if (!recipient && !isReplyMode) {
+        alert('Please select a recipient.');
+        return;
+      }
       
       // Determine recipients array
       let recipientsArray;
@@ -360,9 +371,10 @@ function setupSendMessageHandler(targetRole, targetLabel, isReplyMode) {
 }
 
 // ============================================================================
-// 🔹 Initialize communication buttons (called from navigation.js)
+// 🔹 INITIALIZE COMMUNICATION BUTTONS (CALLED FROM NAVIGATION.JS)
 // ============================================================================
 function initCommunicationButtons() {
+  // ✅ Base buttons for ALL roles
   const buttonMap = {
     'sendToClerkBtn': ['clerk_or_admin', 'Clerk/Admin'], // ✅ Combined Clerk/Admin for non-clerk roles
     'sendToDABtn': ['district_attorney', 'District Attorney'],
@@ -422,11 +434,11 @@ function initCommunicationButtons() {
     if (sendToAllBtn) {
       sendToAllBtn.addEventListener('click', () => {
         if (typeof showCommunicationModal === 'function') {
-          window.replyContext = { 
-            replyTo: 'all_doj_roles', 
-            threadId: null, 
-            subject: 'ANNOUNCEMENT', 
-            message: '' 
+          window.replyContext = {
+            replyTo: 'all_doj_roles',
+            threadId: null,
+            subject: 'ANNOUNCEMENT',
+            message: ''
           };
           showCommunicationModal('any', 'All DOJ Roles');
         }
