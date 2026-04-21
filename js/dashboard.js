@@ -101,49 +101,50 @@ function showRecusalModal() {
   
   // Attach submit handler
   document.getElementById('submitRecusalBtn')?.addEventListener('click', async () => {
-  const caseId = document.getElementById('recusalCaseId')?.value?.trim();
-  const explanation = document.getElementById('recusalExplanation')?.value?.trim();
-  const evidenceUrl = document.getElementById('recusalEvidence')?.value?.trim();
-  
-  // Collect selected grounds
-  const grounds = [];
-  if (document.getElementById('groundPersonal')?.checked) grounds.push('Personal involvement');
-  if (document.getElementById('groundCharacter')?.checked) grounds.push('Character connection');
-  if (document.getElementById('groundBias')?.checked) grounds.push('Bias or prejudice');
-  if (document.getElementById('groundFinancial')?.checked) grounds.push('Financial interest');
-  if (document.getElementById('groundPrior')?.checked) grounds.push('Prior involvement');
-  if (document.getElementById('groundAppearance')?.checked) grounds.push('Appearance of bias');
-  
-  if (!caseId || grounds.length === 0) {
-    alert('Please enter a Case # and select at least one ground for recusal.');
-    return;
-  }
-  
-  const reason = grounds.join('; ') + (explanation ? ` | ${explanation}` : '');
-  
-  try {
-    // ✅ FIX: Ensure all values are defined and non-null before passing to apiCall
-    const payload = {
-      caseId: caseId || '',
-      requestor: currentUser?.name || 'Unknown',
-      reason: reason || '',
-      evidenceUrl: evidenceUrl || ''
-    };
+    const caseId = document.getElementById('recusalCaseId')?.value?.trim();
+    const explanation = document.getElementById('recusalExplanation')?.value?.trim();
+    const evidenceUrl = document.getElementById('recusalEvidence')?.value?.trim();
     
-    await apiCall('submitRecusal', payload);
+    // Collect selected grounds
+    const grounds = [];
+    if (document.getElementById('groundPersonal')?.checked) grounds.push('Personal involvement');
+    if (document.getElementById('groundCharacter')?.checked) grounds.push('Character connection');
+    if (document.getElementById('groundBias')?.checked) grounds.push('Bias or prejudice');
+    if (document.getElementById('groundFinancial')?.checked) grounds.push('Financial interest');
+    if (document.getElementById('groundPrior')?.checked) grounds.push('Prior involvement');
+    if (document.getElementById('groundAppearance')?.checked) grounds.push('Appearance of bias');
     
-    alert('✅ Recusal motion submitted to Chief Justice and Master Clerk.');
-    closeModal('globalModal');
-    
-    // Notify user via DOJ notifications
-    if (typeof sendNotificationToRole === 'function') {
-      sendNotificationToRole(currentUser.name, `Your recusal motion for case ${caseId} has been submitted.`);
+    if (!caseId || grounds.length === 0) {
+      alert('Please enter a Case # and select at least one ground for recusal.');
+      return;
     }
-  } catch (err) {
-    console.error('Recusal submit error:', err);
-    alert('❌ Failed to submit recusal: ' + (err.message || 'Unknown error'));
-  }
-});
+    
+    const reason = grounds.join('; ') + (explanation ? ` | ${explanation}` : '');
+    
+    try {
+      // ✅ FIX: Ensure all values are defined and non-null before passing to apiCall
+      const payload = {
+        caseId: caseId || '',
+        requestor: currentUser?.name || 'Unknown',
+        reason: reason || '',
+        evidenceUrl: evidenceUrl || ''
+      };
+      
+      await apiCall('submitRecusal', payload);
+      
+      alert('✅ Recusal motion submitted to Chief Justice and Master Clerk.');
+      closeModal('globalModal');
+      
+      // Notify user via DOJ notifications
+      if (typeof sendNotificationToRole === 'function') {
+        sendNotificationToRole(currentUser.name, `Your recusal motion for case ${caseId} has been submitted.`);
+      }
+    } catch (err) {
+      console.error('Recusal submit error:', err);
+      alert('❌ Failed to submit recusal: ' + (err.message || 'Unknown error'));
+    }
+  });
+} // ✅ CLOSES showRecusalModal function
 
 // ============================================================================
 // 🔹 OFFICIAL LETTER MODAL - Fixed Preview + Validation + Multi-URL Support
@@ -393,6 +394,7 @@ function showOfficialLetterModal() {
     }
   }); // ✅ CLOSES addEventListener for generateLetterBtn
 } // ✅ CLOSES showOfficialLetterModal function
+
 // ============================================================================
 // 🔹 TRUST ACCOUNT REQUEST MODAL (Withdrawal/Deposit)
 // ============================================================================
@@ -1723,14 +1725,4 @@ window.startTrustConversation = startTrustConversation; // NEW: Start threaded c
 window.showPDReportForm = showPDReportForm;
 window.showPoliceReportForm = showPoliceReportForm;
 window.requestTransport = requestTransport;
-window.serveWarrant = serveWarrant;
-window.reportManhunt = reportManhunt;
-window.submitSecurityReport = submitSecurityReport;
-window.showTrainingModal = showTrainingModal;
-window.formatDateForDisplay = formatDateForDisplay;
-window.showCriminalReportForm = showCriminalReportForm; // NEW: Enhanced criminal report with PenalCode bail
-window.addChargeRow = addChargeRow;
-window.addEvidenceUrlField = addEvidenceUrlField;
-window.removeEvidenceUrlField = removeEvidenceUrlField;
-window.updateReportBail = updateReportBail;
-window.getBailAmountForCode = getBailAmountForCode;
+window.serveWarrant = serve
