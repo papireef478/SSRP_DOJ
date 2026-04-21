@@ -14,21 +14,15 @@ function closeModal(modalId) {
 }
 
 /**
-Show a modal with custom content
-@param {string} contentHtml - HTML content to display
-*/
+ * Show a modal with custom content
+ * @param {string} contentHtml - HTML content to display
+ */
 function showModal(contentHtml) {
   const modal = document.getElementById('globalModal');
   const modalContent = document.getElementById('modalContent');
   
-  // ✅ FIX: Don't show modal if content is empty or undefined
-  if (!contentHtml || contentHtml.trim() === '') {
-    console.warn('showModal called with empty content - modal not shown');
-    return;
-  }
-  
   if (modal && modalContent) {
-    modalContent.innerHTML = `<div class="modal-scroll-container">${contentHtml}</div>`;
+    modalContent.innerHTML = contentHtml;
     modal.classList.remove('hidden');
     
     // Close on overlay click
@@ -39,6 +33,7 @@ function showModal(contentHtml) {
     };
   }
 }
+
 /**
  * Show Quick Guide modal
  */
