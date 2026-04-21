@@ -255,144 +255,144 @@ function showOfficialLetterModal() {
   typeSelect?.addEventListener('change', updatePreview);
   urlInput?.addEventListener('input', updatePreview);
   
-  // Generate and upload letter
- document.getElementById('generateLetterBtn')?.addEventListener('click', async () => {
-  const caseNo = document.getElementById('letterCaseNo')?.value?.trim();
-  const letterType = document.getElementById('letterType')?.value;
-  const content = document.getElementById('letterContent')?.value?.trim();
-  const additionalUrl = document.getElementById('letterUrl')?.value?.trim();
-  const signature = document.getElementById('letterSignature')?.value?.trim() || currentUser?.name;
-  
-  // ✅ VALIDATION: Case # is REQUIRED
-  if (!caseNo) {
-    alert('❌ Case Number is required. Please enter a valid Case # to link this letter.');
-    document.getElementById('letterCaseNo')?.focus();
-    return;
-  }
-  
-  if (!letterType) {
-    alert('Please select a Letter Type.');
-    return;
-  }
-  
-  if (!content) {
-    alert('Please enter letter content.');
-    return;
-  }
-  
-  // Disable button and show loading state
-  const btn = document.getElementById('generateLetterBtn');
-  const originalText = btn?.innerHTML || 'Generate & Upload Letter';
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = '⏳ Generating...';
-  }
-  
-  try {
-    // ✅ STEP 1: Generate letter HTML for PDF conversion
-    const letterHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body { font-family: Georgia, serif; line-height: 1.6; padding: 30px; background: white; color: #000; font-size: 14px; }
-          .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 15px; }
-          .header h1 { margin: 0; font-size: 1.3em; }
-          .header p { margin: 3px 0 0; font-style: italic; font-size: 0.9em; }
-          .meta { margin: 15px 0; font-size: 0.95em; }
-          .content { margin: 20px 0; padding: 15px; background: #f9f9f9; border-left: 4px solid #c9a227; font-size: 0.95em; }
-          .additional-url { margin: 10px 0; font-size: 0.9em; }
-          .additional-url a { color: #0066cc; text-decoration: none; }
-          .signature { margin-top: 30px; text-align: right; font-size: 0.95em; }
-          .signature-line { border-top: 1px solid #000; width: 220px; margin-left: auto; padding-top: 3px; }
-          .footer { margin-top: 30px; text-align: center; font-size: 0.8em; color: #666; border-top: 1px solid #ccc; padding-top: 10px; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>DEPARTMENT OF JUSTICE</h1>
-          <p>Silent Struggle Roleplay</p>
-        </div>
-        <div class="meta">
-          <strong>OFFICIAL ${letterType.toUpperCase()}</strong><br>
-          Case #: ${caseNo}<br>
-          Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-        </div>
-        <div class="content">
-          ${content.replace(/\n/g, '<br>')}
-        </div>
-        ${additionalUrl ? `<div class="additional-url"><a href="${additionalUrl}" target="_blank">🔗 Additional Information: ${additionalUrl}</a></div>` : ''}
-        <div class="signature">
-          <div class="signature-line">
-            ${signature}<br>
-            <em>Presiding Judge</em>
-          </div>
-        </div>
-        <div class="footer">
-          This is an official document of the Silent Struggle RP Department of Justice.<br>
-          Generated on ${new Date().toISOString()}
-        </div>
-      </body>
-      </html>
-    `;
+  // Generate and upload letter - ✅ PROPERLY CLOSED EVENT LISTENER
+  document.getElementById('generateLetterBtn')?.addEventListener('click', async () => {
+    const caseNo = document.getElementById('letterCaseNo')?.value?.trim();
+    const letterType = document.getElementById('letterType')?.value;
+    const content = document.getElementById('letterContent')?.value?.trim();
+    const additionalUrl = document.getElementById('letterUrl')?.value?.trim();
+    const signature = document.getElementById('letterSignature')?.value?.trim() || currentUser?.name;
     
-    // ✅ STEP 2: Prepare API payload with null-safe values
-    const payload = {
-      caseNo: caseNo || '',
-      letterType: letterType || '',
-      content: content || '',
-      signature: signature || '',
-      letterUrl: additionalUrl || '',
-      letterHtml: letterHtml || '',
-      judgeName: currentUser?.name || 'Unknown',
-      folderId: '15H4kUlsoOOpblHvg6HVjdQXZgGUAGBVI'
-    };
-    
-    // ✅ STEP 3: Call backend API
-    const result = await apiCall('generateOfficialLetter', payload);
-    
-    // ✅ STEP 4: Handle response
-    if (result?.success && result?.driveUrl) {
-      alert(`✅ Official letter generated and uploaded!\n\n📁 Drive Link: ${result.driveUrl}\n\nThe CaseRegistry has been updated with this letter URL in the next available Official Letter URL column (U-Y).`);
-      closeModal('globalModal');
-      
-      // Notify relevant parties
-      if (typeof sendNotificationToRole === 'function') {
-        sendNotificationToRole('clerk', `📄 Official letter filed for case ${caseNo} by Judge ${currentUser?.name}`);
-      }
-      
-      // Optional: Refresh dashboard to show updated case info
-      if (typeof renderDashboardByRole === 'function') {
-        await renderDashboardByRole();
-      }
-    } else {
-      // Backend returned success: false
-      throw new Error(result?.error || 'Failed to generate letter: Unknown error');
+    // ✅ VALIDATION: Case # is REQUIRED
+    if (!caseNo) {
+      alert('❌ Case Number is required. Please enter a valid Case # to link this letter.');
+      document.getElementById('letterCaseNo')?.focus();
+      return;
     }
     
-  } catch (err) {
-    console.error('Failed to generate official letter:', err);
-    
-    // User-friendly error message
-    let errorMsg = err.message || 'Unknown error';
-    if (errorMsg.includes('Unknown action')) {
-      errorMsg = 'Backend function not deployed. Please contact an administrator.';
-    } else if (errorMsg.includes('Case Number is required')) {
-      errorMsg = 'Case Number is required. Please enter a valid Case #.';
+    if (!letterType) {
+      alert('Please select a Letter Type.');
+      return;
     }
     
-    alert('❌ Failed to generate letter: ' + errorMsg);
-  } finally {
-    // Re-enable button
+    if (!content) {
+      alert('Please enter letter content.');
+      return;
+    }
+    
+    // Disable button and show loading state
     const btn = document.getElementById('generateLetterBtn');
+    const originalText = btn?.innerHTML || 'Generate & Upload Letter';
     if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = originalText;
+      btn.disabled = true;
+      btn.innerHTML = '⏳ Generating...';
     }
-  }
-});
-
+    
+    try {
+      // ✅ STEP 1: Generate letter HTML for PDF conversion
+      const letterHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Georgia, serif; line-height: 1.6; padding: 30px; background: white; color: #000; font-size: 14px; }
+            .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 15px; }
+            .header h1 { margin: 0; font-size: 1.3em; }
+            .header p { margin: 3px 0 0; font-style: italic; font-size: 0.9em; }
+            .meta { margin: 15px 0; font-size: 0.95em; }
+            .content { margin: 20px 0; padding: 15px; background: #f9f9f9; border-left: 4px solid #c9a227; font-size: 0.95em; }
+            .additional-url { margin: 10px 0; font-size: 0.9em; }
+            .additional-url a { color: #0066cc; text-decoration: none; }
+            .signature { margin-top: 30px; text-align: right; font-size: 0.95em; }
+            .signature-line { border-top: 1px solid #000; width: 220px; margin-left: auto; padding-top: 3px; }
+            .footer { margin-top: 30px; text-align: center; font-size: 0.8em; color: #666; border-top: 1px solid #ccc; padding-top: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>DEPARTMENT OF JUSTICE</h1>
+            <p>Silent Struggle Roleplay</p>
+          </div>
+          <div class="meta">
+            <strong>OFFICIAL ${letterType.toUpperCase()}</strong><br>
+            Case #: ${caseNo}<br>
+            Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+          </div>
+          <div class="content">
+            ${content.replace(/\n/g, '<br>')}
+          </div>
+          ${additionalUrl ? `<div class="additional-url"><a href="${additionalUrl}" target="_blank">🔗 Additional Information: ${additionalUrl}</a></div>` : ''}
+          <div class="signature">
+            <div class="signature-line">
+              ${signature}<br>
+              <em>Presiding Judge</em>
+            </div>
+          </div>
+          <div class="footer">
+            This is an official document of the Silent Struggle RP Department of Justice.<br>
+            Generated on ${new Date().toISOString()}
+          </div>
+        </body>
+        </html>
+      `;
+      
+      // ✅ STEP 2: Prepare API payload with null-safe values
+      const payload = {
+        caseNo: caseNo || '',
+        letterType: letterType || '',
+        content: content || '',
+        signature: signature || '',
+        letterUrl: additionalUrl || '',
+        letterHtml: letterHtml || '',
+        judgeName: currentUser?.name || 'Unknown',
+        folderId: '15H4kUlsoOOpblHvg6HVjdQXZgGUAGBVI'
+      };
+      
+      // ✅ STEP 3: Call backend API
+      const result = await apiCall('generateOfficialLetter', payload);
+      
+      // ✅ STEP 4: Handle response
+      if (result?.success && result?.driveUrl) {
+        alert(`✅ Official letter generated and uploaded!\n\n📁 Drive Link: ${result.driveUrl}\n\nThe CaseRegistry has been updated with this letter URL in the next available Official Letter URL column (U-Y).`);
+        closeModal('globalModal');
+        
+        // Notify relevant parties
+        if (typeof sendNotificationToRole === 'function') {
+          sendNotificationToRole('clerk', `📄 Official letter filed for case ${caseNo} by Judge ${currentUser?.name}`);
+        }
+        
+        // Optional: Refresh dashboard to show updated case info
+        if (typeof renderDashboardByRole === 'function') {
+          await renderDashboardByRole();
+        }
+      } else {
+        // Backend returned success: false
+        throw new Error(result?.error || 'Failed to generate letter: Unknown error');
+      }
+      
+    } catch (err) {
+      console.error('Failed to generate official letter:', err);
+      
+      // User-friendly error message
+      let errorMsg = err.message || 'Unknown error';
+      if (errorMsg.includes('Unknown action')) {
+        errorMsg = 'Backend function not deployed. Please contact an administrator.';
+      } else if (errorMsg.includes('Case Number is required')) {
+        errorMsg = 'Case Number is required. Please enter a valid Case #.';
+      }
+      
+      alert('❌ Failed to generate letter: ' + errorMsg);
+    } finally {
+      // Re-enable button - ✅ PROPERLY CLOSED
+      const btn = document.getElementById('generateLetterBtn');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+  }); // ✅ CLOSES addEventListener for generateLetterBtn
+} // ✅ CLOSES showOfficialLetterModal function
 // ============================================================================
 // 🔹 TRUST ACCOUNT REQUEST MODAL (Withdrawal/Deposit)
 // ============================================================================
