@@ -14,6 +14,308 @@ function formatDateForDisplay(dateStr) {
   }
 }
 
+// ============================================================================
+// 🔹 RECUSAL REQUEST MODAL
+// ============================================================================
+function showRecusalModal() {
+  showModal(`
+    <div class="p-4">
+      <h3 class="text-xl font-bold mb-4 text-white">⚖️ Motion for Recusal</h3>
+      
+      <div class="space-y-4">
+        <!-- Case # -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Case Number:</label>
+          <input type="text" id="recusalCaseId" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="e.g., CIV-001, CRIM-042" required>
+        </div>
+        
+        <!-- Grounds for Recusal -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Grounds for Recusal:</label>
+          <div class="space-y-2">
+            <label class="flex items-center gap-2 text-sm text-gray-300">
+              <input type="checkbox" id="groundPersonal" class="rounded bg-gray-700 border-gray-600">
+              Judge has personal involvement in case
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-300">
+              <input type="checkbox" id="groundCharacter" class="rounded bg-gray-700 border-gray-600">
+              Judge's OTHER CHARACTER is involved in this matter
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-300">
+              <input type="checkbox" id="groundBias" class="rounded bg-gray-700 border-gray-600">
+              Judge has bias or prejudice
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-300">
+              <input type="checkbox" id="groundFinancial" class="rounded bg-gray-700 border-gray-600">
+              Judge has financial interest
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-300">
+              <input type="checkbox" id="groundPrior" class="rounded bg-gray-700 border-gray-600">
+              Judge has prior involvement as attorney
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-300">
+              <input type="checkbox" id="groundAppearance" class="rounded bg-gray-700 border-gray-600">
+              Appearance of bias (explain below)
+            </label>
+          </div>
+        </div>
+        
+        <!-- Explanation -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Detailed Explanation:</label>
+          <textarea id="recusalExplanation" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white h-24" placeholder="Explain the grounds for recusal..."></textarea>
+        </div>
+        
+        <!-- Evidence URL -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Evidence URL (optional):</label>
+          <input type="url" id="recusalEvidence" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="https://example.com/evidence">
+        </div>
+      </div>
+      
+      <div class="flex gap-3 justify-end mt-6">
+        <button id="submitRecusalBtn" class="btn-primary py-2 px-4 rounded-lg">Submit Motion</button>
+        <button onclick="closeModal('globalModal')" class="btn-secondary py-2 px-4 rounded-lg">Cancel</button>
+      </div>
+    </div>
+  `);
+  
+  // Attach submit handler
+  document.getElementById('submitRecusalBtn')?.addEventListener('click', async () => {
+    const caseId = document.getElementById('recusalCaseId')?.value?.trim();
+    const explanation = document.getElementById('recusalExplanation')?.value?.trim();
+    const evidenceUrl = document.getElementById('recusalEvidence')?.value?.trim();
+    
+    // Collect selected grounds
+    const grounds = [];
+    if (document.getElementById('groundPersonal')?.checked) grounds.push('Personal involvement');
+    if (document.getElementById('groundCharacter')?.checked) grounds.push('Character connection');
+    if (document.getElementById('groundBias')?.checked) grounds.push('Bias or prejudice');
+    if (document.getElementById('groundFinancial')?.checked) grounds.push('Financial interest');
+    if (document.getElementById('groundPrior')?.checked) grounds.push('Prior involvement');
+    if (document.getElementById('groundAppearance')?.checked) grounds.push('Appearance of bias');
+    
+    if (!caseId || grounds.length === 0) {
+      alert('Please enter a Case # and select at least one ground for recusal.');
+      return;
+    }
+    
+    const reason = grounds.join('; ') + (explanation ? ` | ${explanation}` : '');
+    
+    try {
+      await apiCall('submitRecusal', {
+        caseId,
+        requestor: currentUser.name,
+        reason,
+        evidenceUrl: evidenceUrl || ''
+      });
+      
+      alert('✅ Recusal motion submitted to Chief Justice and Master Clerk.');
+      closeModal('globalModal');
+      
+      // Notify user via DOJ notifications
+      if (typeof sendNotificationToRole === 'function') {
+        sendNotificationToRole(currentUser.name, `Your recusal motion for case ${caseId} has been submitted.`);
+      }
+    } catch (err) {
+      alert('❌ Failed to submit recusal: ' + (err.message || 'Unknown error'));
+    }
+  });
+}
+
+// ============================================================================
+// 🔹 OFFICIAL LETTER MODAL (Judge Only)
+// ============================================================================
+function showOfficialLetterModal() {
+  showModal(`
+    <div class="p-4">
+      <h3 class="text-xl font-bold mb-4 text-white">✉️ Official Letter</h3>
+      
+      <div class="space-y-4">
+        <!-- Case # (auto-filled from judge's cases) -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Case Number:</label>
+          <input type="text" id="letterCaseNo" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="e.g., CIV-001, CRIM-042" required>
+        </div>
+        
+        <!-- Letter Type -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Letter Type:</label>
+          <select id="letterType" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white">
+            <option value="">Select letter type...</option>
+            <option value="ruling">Court Ruling</option>
+            <option value="order">Court Order</option>
+            <option value="subpoena">Subpoena</option>
+            <option value="warrant">Search/Arrest Warrant</option>
+            <option value="other">Other Official Document</option>
+          </select>
+        </div>
+        
+        <!-- Content -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Letter Content:</label>
+          <textarea id="letterContent" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white h-40" placeholder="Enter the official letter content..."></textarea>
+        </div>
+        
+        <!-- Signature -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Judge's Signature:</label>
+          <input type="text" id="letterSignature" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="Judge's name/title" value="${currentUser.name || ''}" readonly>
+        </div>
+        
+        <!-- Preview Section -->
+        <div class="border border-gray-600 rounded-lg p-3 bg-gray-800/50">
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Preview:</label>
+          <div id="letterPreview" class="text-sm text-gray-300 whitespace-pre-wrap border border-gray-700 rounded p-2 bg-gray-900 min-h-[100px]">
+            [Letter preview will appear here]
+          </div>
+        </div>
+      </div>
+      
+      <div class="flex gap-3 justify-end mt-6">
+        <button id="generateLetterBtn" class="btn-primary py-2 px-4 rounded-lg">Generate & Upload Letter</button>
+        <button onclick="closeModal('globalModal')" class="btn-secondary py-2 px-4 rounded-lg">Cancel</button>
+      </div>
+    </div>
+  `);
+  
+  // Live preview as user types
+  const contentInput = document.getElementById('letterContent');
+  const caseNoInput = document.getElementById('letterCaseNo');
+  const typeSelect = document.getElementById('letterType');
+  const previewDiv = document.getElementById('letterPreview');
+  
+  function updatePreview() {
+    const caseNo = caseNoInput?.value || '[Case #]';
+    const type = typeSelect?.options[typeSelect?.selectedIndex]?.text || '[Letter Type]';
+    const content = contentInput?.value || '[Letter content...]';
+    const signature = currentUser.name || '[Judge Name]';
+    const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    
+    previewDiv.innerHTML = `
+      <div style="font-family: serif; line-height: 1.6;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <strong style="font-size: 1.2em;">DEPARTMENT OF JUSTICE</strong><br>
+          <em>Silent Struggle Roleplay</em>
+        </div>
+        <div style="margin-bottom: 15px;">
+          <strong>OFFICIAL ${type.toUpperCase()}</strong><br>
+          Case #: ${caseNo}<br>
+          Date: ${date}
+        </div>
+        <div style="margin: 20px 0; padding: 10px; background: rgba(255,255,255,0.05); border-left: 3px solid #c9a227;">
+          ${content.replace(/\n/g, '<br>')}
+        </div>
+        <div style="margin-top: 30px; text-align: right;">
+          <div style="border-top: 1px solid #666; padding-top: 5px; width: 200px; margin-left: auto;">
+            ${signature}<br>
+            <em style="font-size: 0.9em;">Presiding Judge</em>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  
+  contentInput?.addEventListener('input', updatePreview);
+  caseNoInput?.addEventListener('input', updatePreview);
+  typeSelect?.addEventListener('change', updatePreview);
+  
+  // Generate and upload letter
+  document.getElementById('generateLetterBtn')?.addEventListener('click', async () => {
+    const caseNo = document.getElementById('letterCaseNo')?.value?.trim();
+    const letterType = document.getElementById('letterType')?.value;
+    const content = document.getElementById('letterContent')?.value?.trim();
+    const signature = document.getElementById('letterSignature')?.value?.trim() || currentUser.name;
+    
+    if (!caseNo || !letterType || !content) {
+      alert('Please fill in Case #, Letter Type, and Content.');
+      return;
+    }
+    
+    const btn = document.getElementById('generateLetterBtn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Generating...';
+    
+    try {
+      // ✅ STEP 1: Generate letter HTML for preview/capture
+      const letterHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Georgia, serif; line-height: 1.6; padding: 40px; background: white; color: #000; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 20px; }
+            .header h1 { margin: 0; font-size: 1.5em; }
+            .header p { margin: 5px 0 0; font-style: italic; }
+            .meta { margin: 20px 0; }
+            .content { margin: 30px 0; padding: 20px; background: #f9f9f9; border-left: 4px solid #c9a227; }
+            .signature { margin-top: 50px; text-align: right; }
+            .signature-line { border-top: 1px solid #000; width: 250px; margin-left: auto; padding-top: 5px; }
+            .footer { margin-top: 40px; text-align: center; font-size: 0.9em; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>DEPARTMENT OF JUSTICE</h1>
+            <p>Silent Struggle Roleplay</p>
+          </div>
+          <div class="meta">
+            <strong>OFFICIAL ${letterType.toUpperCase()}</strong><br>
+            Case #: ${caseNo}<br>
+            Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+          </div>
+          <div class="content">
+            ${content.replace(/\n/g, '<br>')}
+          </div>
+          <div class="signature">
+            <div class="signature-line">
+              ${signature}<br>
+              <em>Presiding Judge</em>
+            </div>
+          </div>
+          <div class="footer">
+            This is an official document of the Silent Struggle RP Department of Justice.<br>
+            Generated on ${new Date().toISOString()}
+          </div>
+        </body>
+        </html>
+      `;
+      
+      // ✅ STEP 2: Call backend to upload to Drive and update CaseRegistry
+      const result = await apiCall('generateOfficialLetter', {
+        caseNo,
+        letterType,
+        content,
+        signature,
+        letterHtml,
+        judgeName: currentUser.name,
+        folderId: '15H4kUlsoOOpblHvg6HVjdQXZgGUAGBVI' // Official Letters folder
+      });
+      
+      if (result.success && result.driveUrl) {
+        alert(`✅ Official letter generated and uploaded!\n\n📁 Drive Link: ${result.driveUrl}\n\nThe CaseRegistry has been updated with this letter URL.`);
+        closeModal('globalModal');
+        
+        // Notify relevant parties
+        if (typeof sendNotificationToRole === 'function') {
+          sendNotificationToRole('clerk', `📄 Official letter filed for case ${caseNo} by Judge ${currentUser.name}`);
+        }
+      } else {
+        throw new Error(result.error || 'Failed to generate letter');
+      }
+      
+    } catch (err) {
+      console.error('Failed to generate official letter:', err);
+      alert('❌ Failed to generate letter: ' + (err.message || 'Unknown error'));
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+  });
+}
+
 // ============================================
 // DASHBOARD - ALL ROLES WITH REAL API
 // ============================================
@@ -66,19 +368,19 @@ async function renderDashboardByRole() {
         ${tasks.length > 0 ? tasks.map(task => {
           // ✅ Ensure task.id exists and is valid number
           const taskId = task.id != null && !isNaN(parseInt(task.id)) ? parseInt(task.id) : '';
-          // ✅ Format due_date properly
-return `
-  <li class="flex items-center gap-2">
-    <input type="checkbox" 
-           ${task.status === 'done' ? 'checked' : ''} 
-           data-id="${task.id != null && !isNaN(parseInt(task.id)) ? parseInt(task.id) : ''}" 
-           class="task-checkbox">
-    <span class="flex-1">${task.task || 'Unnamed task'}</span>
-    <span class="text-xs text-gray-500">
-      ${formatDateForDisplay(task.due_date || task.due || '')}${task.frequency ? ` • ${task.frequency}` : ''}
-    </span>
-  </li>
-`;
+          // ✅ Format due_date properly and show frequency
+          return `
+            <li class="flex items-center gap-2">
+              <input type="checkbox" 
+                     ${task.status === 'done' ? 'checked' : ''} 
+                     data-id="${taskId}" 
+                     class="task-checkbox">
+              <span class="flex-1">${task.task || 'Unnamed task'}</span>
+              <span class="text-xs text-gray-500">
+                ${formatDateForDisplay(task.due_date || task.due || '')}${task.frequency ? ` • ${task.frequency}` : ''}
+              </span>
+            </li>
+          `;
         }).join('') : '<li class="text-gray-400 text-sm">No tasks assigned</li>'}
       </ul>
     </div>
@@ -445,8 +747,8 @@ function attachDashboardEventListeners(role) {
                 <input type="checkbox" ${task.status === 'done' ? 'checked' : ''} data-id="${task.id}" class="task-checkbox">
                 <span class="flex-1">${task.task}</span>
                 <span class="text-xs text-gray-500">
-  ${formatDateForDisplay(task.due_date || task.due || '')}${task.frequency ? ` • ${task.frequency}` : ''}
-</span>
+                  ${formatDateForDisplay(task.due_date || task.due || '')}${task.frequency ? ` • ${task.frequency}` : ''}
+                </span>
               </li>
             `).join('');
           }
@@ -539,19 +841,33 @@ function attachDashboardEventListeners(role) {
   
   // Role-specific buttons
   if (role === 'judge') {
+    // ✅ Recusal button - use new modal
     document.getElementById('recusalBtn')?.addEventListener('click', () => {
-      if (typeof submitRecusal === 'function') {
-        submitRecusal();
+      if (typeof showRecusalModal === 'function') {
+        showRecusalModal();
       } else {
         alert('Recusal request form (coming soon)');
       }
     });
-    document.getElementById('sentencingBtn')?.addEventListener('click', () => alert('Sentencing form (coming soon)'));
-    document.getElementById('officialLetterBtn')?.addEventListener('click', () => alert('Official letter form (coming soon)'));
+    
+    // ✅ Sentencing button (placeholder for now)
+    document.getElementById('sentencingBtn')?.addEventListener('click', () => {
+      alert('📝 Sentencing form (coming soon)\n\nThis will allow you to upload professional sentencing letters to the Drive folder and update the CaseRegistry.');
+    });
+    
+    // ✅ Official Letter button - use new modal
+    document.getElementById('officialLetterBtn')?.addEventListener('click', () => {
+      if (typeof showOfficialLetterModal === 'function') {
+        showOfficialLetterModal();
+      } else {
+        alert('Official letter form (coming soon)');
+      }
+    });
+    
   } else if (role === 'attorney') {
     document.getElementById('recusalBtn')?.addEventListener('click', () => {
-      if (typeof submitRecusal === 'function') {
-        submitRecusal();
+      if (typeof showRecusalModal === 'function') {
+        showRecusalModal();
       } else {
         alert('Recusal request form (coming soon)');
       }
@@ -560,8 +876,8 @@ function attachDashboardEventListeners(role) {
     document.getElementById('trustDepositBtn')?.addEventListener('click', () => alert('Trust deposit form (coming soon)'));
   } else if (role === 'public_defender') {
     document.getElementById('recusalBtn')?.addEventListener('click', () => {
-      if (typeof submitRecusal === 'function') {
-        submitRecusal();
+      if (typeof showRecusalModal === 'function') {
+        showRecusalModal();
       } else {
         alert('Recusal request form (coming soon)');
       }
@@ -809,10 +1125,15 @@ function showRecusalQueue() {
 }
 
 /**
- * Show recusal request form (for judges/attorneys)
+ * Show recusal request form (for judges/attorneys) - DEPRECATED, use showRecusalModal instead
  */
 function submitRecusal() {
-  alert('⚖️ Recusal Request Form (coming soon)\n\nSubmit a request to be recused from a case.');
+  // Redirect to new modal if available
+  if (typeof showRecusalModal === 'function') {
+    showRecusalModal();
+  } else {
+    alert('⚖️ Recusal Request Form (coming soon)\n\nSubmit a request to be recused from a case.');
+  }
 }
 
 /**
@@ -846,7 +1167,9 @@ window.getAvailabilityColor = getAvailabilityColor;
 window.renderDADashboard = renderDADashboard;
 window.attachDAEventListeners = attachDAEventListeners;
 window.showRecusalQueue = showRecusalQueue;
-window.submitRecusal = submitRecusal;
+window.submitRecusal = submitRecusal; // Keep for backward compatibility
+window.showRecusalModal = showRecusalModal; // NEW: Full recusal modal
+window.showOfficialLetterModal = showOfficialLetterModal; // NEW: Official letter modal
 window.showPDReportForm = showPDReportForm;
 window.showPoliceReportForm = showPoliceReportForm;
 window.requestTransport = requestTransport;
