@@ -15,15 +15,27 @@ function formatDateForDisplay(dateStr) {
 }
 
 // ============================================================================
-// 🔹 RECUSAL REQUEST MODAL - ROLE-SPECIFIC LABELS
+// 🔹 HELPER: Get bail amount from PenalCode data
+// ============================================================================
+async function getBailAmountForCode(penalCode) {
+  try {
+    const result = await apiCall('getPenalCode');
+    const codes = result.codes || [];
+    const match = codes.find(c => String(c.Code) === String(penalCode));
+    return match ? parseFloat(match.Fine || 0) : 0;
+  } catch (err) {
+    console.error('Failed to fetch bail amount:', err);
+    return 0;
+  }
+}
+
+// ============================================================================
+// 🔹 RECUSAL REQUEST MODAL - Dynamic Role Text
 // ============================================================================
 function showRecusalModal() {
-  // Get current role and format for display
-  const currentRole = currentUser?.role || 'user';
-  const roleDisplay = currentRole
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+  // Get current user's role for dynamic text
+  const userRole = currentUser?.role?.replace('_', ' ') || 'User';
+  const roleText = userRole.charAt(0).toUpperCase() + userRole.slice(1);
   
   showModal(`
     <div class="p-4">
@@ -36,29 +48,29 @@ function showRecusalModal() {
           <input type="text" id="recusalCaseId" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="e.g., CIV-001, CRIM-042" required>
         </div>
         
-        <!-- Grounds for Recusal - DYNAMIC ROLE LABELS -->
+        <!-- Grounds for Recusal - Dynamic Role Text -->
         <div>
           <label class="block text-gray-300 mb-2 text-sm font-medium">Grounds for Recusal:</label>
           <div class="space-y-2">
             <label class="flex items-center gap-2 text-sm text-gray-300">
               <input type="checkbox" id="groundPersonal" class="rounded bg-gray-700 border-gray-600">
-              ${roleDisplay} has personal involvement in case
+              ${roleText} has personal involvement in case
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-300">
               <input type="checkbox" id="groundCharacter" class="rounded bg-gray-700 border-gray-600">
-              ${roleDisplay}'s OTHER CHARACTER is involved in this matter
+              ${roleText}'s OTHER CHARACTER is involved in this matter
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-300">
               <input type="checkbox" id="groundBias" class="rounded bg-gray-700 border-gray-600">
-              ${roleDisplay} has bias or prejudice
+              ${roleText} has bias or prejudice
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-300">
               <input type="checkbox" id="groundFinancial" class="rounded bg-gray-700 border-gray-600">
-              ${roleDisplay} has financial interest
+              ${roleText} has financial interest
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-300">
               <input type="checkbox" id="groundPrior" class="rounded bg-gray-700 border-gray-600">
-              ${roleDisplay} has prior involvement as attorney
+              ${roleText} has prior involvement as attorney
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-300">
               <input type="checkbox" id="groundAppearance" class="rounded bg-gray-700 border-gray-600">
@@ -131,7 +143,7 @@ function showRecusalModal() {
 }
 
 // ============================================================================
-// 🔹 OFFICIAL LETTER MODAL (Judge Only)
+// 🔹 OFFICIAL LETTER MODAL - Fixed Preview + URL Field
 // ============================================================================
 function showOfficialLetterModal() {
   showModal(`
@@ -161,7 +173,13 @@ function showOfficialLetterModal() {
         <!-- Content -->
         <div>
           <label class="block text-gray-300 mb-2 text-sm font-medium">Letter Content:</label>
-          <textarea id="letterContent" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white h-40" placeholder="Enter the official letter content..."></textarea>
+          <textarea id="letterContent" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white h-32" placeholder="Enter the official letter content..."></textarea>
+        </div>
+        
+        <!-- Additional URL Link -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Additional Info URL (optional):</label>
+          <input type="url" id="letterUrl" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="https://example.com/additional-info">
         </div>
         
         <!-- Signature -->
@@ -170,10 +188,10 @@ function showOfficialLetterModal() {
           <input type="text" id="letterSignature" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="Judge's name/title" value="${currentUser.name || ''}" readonly>
         </div>
         
-        <!-- Preview Section -->
+        <!-- Preview Section - FIXED: Shorter height with scroll -->
         <div class="border border-gray-600 rounded-lg p-3 bg-gray-800/50">
           <label class="block text-gray-300 mb-2 text-sm font-medium">Preview:</label>
-          <div id="letterPreview" class="text-sm text-gray-300 whitespace-pre-wrap border border-gray-700 rounded p-2 bg-gray-900 min-h-[100px]">
+          <div id="letterPreview" class="text-sm text-gray-300 whitespace-pre-wrap border border-gray-700 rounded p-2 bg-gray-900 min-h-[100px] max-h-[150px] overflow-y-auto">
             [Letter preview will appear here]
           </div>
         </div>
@@ -190,48 +208,54 @@ function showOfficialLetterModal() {
   const contentInput = document.getElementById('letterContent');
   const caseNoInput = document.getElementById('letterCaseNo');
   const typeSelect = document.getElementById('letterType');
+  const urlInput = document.getElementById('letterUrl');
   const previewDiv = document.getElementById('letterPreview');
   
   function updatePreview() {
     const caseNo = caseNoInput?.value || '[Case #]';
     const type = typeSelect?.options[typeSelect?.selectedIndex]?.text || '[Letter Type]';
     const content = contentInput?.value || '[Letter content...]';
+    const additionalUrl = urlInput?.value?.trim();
     const signature = currentUser.name || '[Judge Name]';
     const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     
-    previewDiv.innerHTML = `
-      <div style="font-family: serif; line-height: 1.6;">
-        <div style="text-align: center; margin-bottom: 20px;">
-          <strong style="font-size: 1.2em;">DEPARTMENT OF JUSTICE</strong><br>
-          <em>Silent Struggle Roleplay</em>
+    let previewHtml = `
+      <div style="font-family: serif; line-height: 1.6; font-size: 0.9em;">
+        <div style="text-align: center; margin-bottom: 15px; border-bottom: 1px solid #555; padding-bottom: 10px;">
+          <strong style="font-size: 1.1em;">DEPARTMENT OF JUSTICE</strong><br>
+          <em style="font-size: 0.9em;">Silent Struggle Roleplay</em>
         </div>
-        <div style="margin-bottom: 15px;">
+        <div style="margin-bottom: 10px; font-size: 0.9em;">
           <strong>OFFICIAL ${type.toUpperCase()}</strong><br>
           Case #: ${caseNo}<br>
           Date: ${date}
         </div>
-        <div style="margin: 20px 0; padding: 10px; background: rgba(255,255,255,0.05); border-left: 3px solid #c9a227;">
+        <div style="margin: 15px 0; padding: 10px; background: rgba(255,255,255,0.05); border-left: 3px solid #c9a227; font-size: 0.9em;">
           ${content.replace(/\n/g, '<br>')}
         </div>
-        <div style="margin-top: 30px; text-align: right;">
-          <div style="border-top: 1px solid #666; padding-top: 5px; width: 200px; margin-left: auto;">
+        ${additionalUrl ? `<div style="margin: 10px 0; font-size: 0.85em;"><a href="${additionalUrl}" target="_blank" style="color: #60a5fa;">🔗 Additional Information</a></div>` : ''}
+        <div style="margin-top: 20px; text-align: right; font-size: 0.9em;">
+          <div style="border-top: 1px solid #666; padding-top: 3px; width: 180px; margin-left: auto;">
             ${signature}<br>
-            <em style="font-size: 0.9em;">Presiding Judge</em>
+            <em style="font-size: 0.85em;">Presiding Judge</em>
           </div>
         </div>
       </div>
     `;
+    previewDiv.innerHTML = previewHtml;
   }
   
   contentInput?.addEventListener('input', updatePreview);
   caseNoInput?.addEventListener('input', updatePreview);
   typeSelect?.addEventListener('change', updatePreview);
+  urlInput?.addEventListener('input', updatePreview);
   
   // Generate and upload letter
   document.getElementById('generateLetterBtn')?.addEventListener('click', async () => {
     const caseNo = document.getElementById('letterCaseNo')?.value?.trim();
     const letterType = document.getElementById('letterType')?.value;
     const content = document.getElementById('letterContent')?.value?.trim();
+    const additionalUrl = document.getElementById('letterUrl')?.value?.trim();
     const signature = document.getElementById('letterSignature')?.value?.trim() || currentUser.name;
     
     if (!caseNo || !letterType || !content) {
@@ -252,15 +276,17 @@ function showOfficialLetterModal() {
         <head>
           <meta charset="utf-8">
           <style>
-            body { font-family: Georgia, serif; line-height: 1.6; padding: 40px; background: white; color: #000; }
-            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 20px; }
-            .header h1 { margin: 0; font-size: 1.5em; }
-            .header p { margin: 5px 0 0; font-style: italic; }
-            .meta { margin: 20px 0; }
-            .content { margin: 30px 0; padding: 20px; background: #f9f9f9; border-left: 4px solid #c9a227; }
-            .signature { margin-top: 50px; text-align: right; }
-            .signature-line { border-top: 1px solid #000; width: 250px; margin-left: auto; padding-top: 5px; }
-            .footer { margin-top: 40px; text-align: center; font-size: 0.9em; color: #666; }
+            body { font-family: Georgia, serif; line-height: 1.6; padding: 30px; background: white; color: #000; font-size: 14px; }
+            .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 15px; }
+            .header h1 { margin: 0; font-size: 1.3em; }
+            .header p { margin: 3px 0 0; font-style: italic; font-size: 0.9em; }
+            .meta { margin: 15px 0; font-size: 0.95em; }
+            .content { margin: 20px 0; padding: 15px; background: #f9f9f9; border-left: 4px solid #c9a227; font-size: 0.95em; }
+            .additional-url { margin: 10px 0; font-size: 0.9em; }
+            .additional-url a { color: #0066cc; text-decoration: none; }
+            .signature { margin-top: 30px; text-align: right; font-size: 0.95em; }
+            .signature-line { border-top: 1px solid #000; width: 220px; margin-left: auto; padding-top: 3px; }
+            .footer { margin-top: 30px; text-align: center; font-size: 0.8em; color: #666; border-top: 1px solid #ccc; padding-top: 10px; }
           </style>
         </head>
         <body>
@@ -276,6 +302,7 @@ function showOfficialLetterModal() {
           <div class="content">
             ${content.replace(/\n/g, '<br>')}
           </div>
+          ${additionalUrl ? `<div class="additional-url"><a href="${additionalUrl}" target="_blank">🔗 Additional Information: ${additionalUrl}</a></div>` : ''}
           <div class="signature">
             <div class="signature-line">
               ${signature}<br>
@@ -296,6 +323,7 @@ function showOfficialLetterModal() {
         letterType,
         content,
         signature,
+        additionalUrl: additionalUrl || '',
         letterHtml,
         judgeName: currentUser.name,
         folderId: '15H4kUlsoOOpblHvg6HVjdQXZgGUAGBVI' // Official Letters folder
@@ -321,6 +349,356 @@ function showOfficialLetterModal() {
       btn.innerHTML = originalText;
     }
   });
+}
+
+// ============================================================================
+// 🔹 TRUST ACCOUNT REQUEST MODAL (Withdrawal/Deposit)
+// ============================================================================
+function showTrustRequestModal(requestType) {
+  const requestLabel = requestType === 'withdrawal' ? 'Withdrawal' : 'Deposit';
+  
+  showModal(`
+    <div class="p-4">
+      <h3 class="text-xl font-bold mb-4 text-white">
+        💰 Trust Account ${requestLabel} Request
+      </h3>
+      
+      <div class="space-y-4">
+        <!-- Amount -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Amount ($):</label>
+          <input type="number" id="trustAmount" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="Enter amount" min="1" required>
+        </div>
+        
+        <!-- Case # (optional) -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Case Number (optional):</label>
+          <input type="text" id="trustCaseNo" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="e.g., CIV-001">
+        </div>
+        
+        <!-- Reason -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Reason:</label>
+          <textarea id="trustReason" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white h-20" placeholder="Explain the purpose of this request..." required></textarea>
+        </div>
+        
+        <!-- Attachment URL (optional) -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Attachment URL (optional):</label>
+          <input type="url" id="trustAttachment" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="https://example.com/document">
+        </div>
+      </div>
+      
+      <div class="flex gap-3 justify-end mt-6">
+        <button id="submitTrustRequestBtn" class="btn-primary py-2 px-4 rounded-lg">Submit Request</button>
+        <button onclick="closeModal('globalModal')" class="btn-secondary py-2 px-4 rounded-lg">Cancel</button>
+      </div>
+    </div>
+  `);
+  
+  // Submit handler
+  document.getElementById('submitTrustRequestBtn')?.addEventListener('click', async () => {
+    const amount = parseFloat(document.getElementById('trustAmount')?.value);
+    const caseNo = document.getElementById('trustCaseNo')?.value?.trim();
+    const reason = document.getElementById('trustReason')?.value?.trim();
+    const attachmentUrl = document.getElementById('trustAttachment')?.value?.trim();
+    
+    if (!amount || amount <= 0 || !reason) {
+      alert('Please enter a valid amount and reason.');
+      return;
+    }
+    
+    try {
+      // Create a message thread for this request
+      const threadId = `trust_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Send initial notification to ALL Clerks/Admins/CJ
+      await apiCall('sendMessage', {
+        recipientNames: ['clerk', 'admin', 'chief_justice'],
+        message: `🔔 Trust Account Request\n\nType: ${requestLabel}\nAmount: $${amount.toLocaleString()}\nRequestor: ${currentUser.name}\nReason: ${reason}\n${caseNo ? `Case: ${caseNo}\n` : ''}${attachmentUrl ? `Attachment: ${attachmentUrl}\n` : ''}\n\nClick to respond and start a private conversation.`,
+        sender: currentUser.name,
+        subject: `Trust Request: ${requestLabel} - $${amount}`,
+        thread_id: threadId,
+        urls: attachmentUrl ? [attachmentUrl] : []
+      });
+      
+      // Also submit to TrustRequests sheet via backend
+      await apiCall('submitTrustRequest', {
+        requestor_name: currentUser.name,
+        request_type: requestType,
+        amount: amount,
+        case_no: caseNo || '',
+        reason: reason,
+        attachment_url: attachmentUrl || ''
+      });
+      
+      alert('✅ Trust request submitted. Clerks will be notified.');
+      closeModal('globalModal');
+      
+      // Notify requestor
+      if (typeof sendNotificationToRole === 'function') {
+        sendNotificationToRole(currentUser.name, `Your trust ${requestType} request for $${amount} has been submitted.`);
+      }
+    } catch (err) {
+      alert('❌ Failed to submit request: ' + (err.message || 'Unknown error'));
+    }
+  });
+}
+
+// ============================================================================
+// 🔹 ENHANCED CRIMINAL REPORT FORM - Dynamic Bail from PenalCode
+// ============================================================================
+async function showCriminalReportForm(reportType) {
+  // Fetch Penal Code data for bail amounts
+  let penalCodes = [];
+  try {
+    const pcResult = await apiCall('getPenalCode');
+    penalCodes = pcResult.codes || [];
+  } catch (err) {
+    console.error('Failed to load Penal Code:', err);
+  }
+  
+  showModal(`
+    <div class="p-4">
+      <h3 class="text-xl font-bold mb-4 text-white">
+        ${reportType === 'police' ? '🚨 File Criminal Report (Police)' : '🛡️ Submit Criminal Report to DA (Public Defender)'}
+      </h3>
+      
+      <div class="space-y-4">
+        <!-- Defendant -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Defendant Name:</label>
+          <input type="text" id="defendant" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="Enter defendant's character name" required>
+        </div>
+        
+        <!-- Case # (optional) -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Case Number (optional):</label>
+          <input type="text" id="caseNo" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="e.g., CRIM-042">
+        </div>
+        
+        <!-- Charges Section -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Charges:</label>
+          <div id="chargesContainer" class="space-y-2 mb-2"></div>
+          <button type="button" id="addChargeBtn" class="btn-secondary text-sm py-1 px-3 rounded-lg">+ Add Another Charge</button>
+        </div>
+        
+        <!-- Bail Total (auto-calculated from PenalCode Fine $) -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Total Bail (calculated from Penal Code):</label>
+          <input type="number" id="bailTotal" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" readonly>
+        </div>
+        
+        <!-- Evidence URLs -->
+        <div>
+          <label class="block text-gray-300 mb-2 text-sm font-medium">Evidence URLs (optional):</label>
+          <div id="evidenceUrlsContainer" class="space-y-2 mb-2">
+            <div class="flex gap-2">
+              <input type="url" name="evidenceUrl" class="flex-1 p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="https://example.com/evidence">
+              <button type="button" onclick="addEvidenceUrlField()" class="text-green-400 hover:text-green-300 text-xl font-bold" title="Add URL">+</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Bodycam URL (Police only) -->
+        ${reportType === 'police' ? `
+          <div>
+            <label class="block text-gray-300 mb-2 text-sm font-medium">Bodycam URL (optional):</label>
+            <input type="url" id="bodycamUrl" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="https://example.com/bodycam">
+          </div>
+        ` : ''}
+      </div>
+      
+      <div class="flex gap-3 justify-end mt-6">
+        <button id="submitReportBtn" class="btn-primary py-2 px-4 rounded-lg">Submit to DA</button>
+        <button onclick="closeModal('globalModal')" class="btn-secondary py-2 px-4 rounded-lg">Cancel</button>
+      </div>
+    </div>
+  `);
+  
+  // Initialize charge rows with PenalCode dropdown
+  addChargeRow('chargesContainer', penalCodes);
+  
+  // Add charge button
+  document.getElementById('addChargeBtn')?.addEventListener('click', () => {
+    addChargeRow('chargesContainer', penalCodes);
+  });
+  
+  // Submit handler
+  document.getElementById('submitReportBtn')?.addEventListener('click', async () => {
+    const defendant = document.getElementById('defendant')?.value?.trim();
+    const caseNo = document.getElementById('caseNo')?.value?.trim();
+    const bodycamUrl = reportType === 'police' ? document.getElementById('bodycamUrl')?.value?.trim() : '';
+    
+    // Collect charges with bail amounts from PenalCode
+    const charges = [];
+    document.querySelectorAll('.charge-row').forEach(row => {
+      const code = row.querySelector('.chargeCode')?.value;
+      const offense = row.querySelector('.chargeCode')?.options[row.querySelector('.chargeCode').selectedIndex]?.text || '';
+      const level = row.querySelector('.chargeCode')?.dataset?.level || '';
+      const bailAmount = parseFloat(row.querySelector('.chargeCode')?.dataset?.bail || 0);
+      const desc = row.querySelector('.chargeDesc')?.value?.trim() || '';
+      
+      if (code) {
+        charges.push({
+          code,
+          offense: offense.split(' - ')[1] || offense,
+          level,
+          bailAmount,
+          description: desc
+        });
+      }
+    });
+    
+    // Collect evidence URLs
+    const evidenceUrls = [];
+    document.querySelectorAll('#evidenceUrlsContainer input[name="evidenceUrl"]').forEach(input => {
+      const url = input.value?.trim();
+      if (url && url.startsWith('http')) {
+        evidenceUrls.push(url);
+      }
+    });
+    
+    const bailTotal = parseFloat(document.getElementById('bailTotal')?.value) || 0;
+    
+    if (!defendant || charges.length === 0) {
+      alert('Please enter defendant name and at least one charge.');
+      return;
+    }
+    
+    try {
+      await apiCall('submitReport', {
+        type: reportType,
+        defendant,
+        caseNo: caseNo || '',
+        charges,
+        bailTotal,
+        bodycamUrl: bodycamUrl || '',
+        evidenceUrls,
+        submittedBy: currentUser.name
+      });
+      
+      alert('✅ Report submitted to DA for review.');
+      closeModal('globalModal');
+      
+      // Notify DA
+      if (typeof sendNotificationToRole === 'function') {
+        sendNotificationToRole('district_attorney', `New ${reportType} report filed for ${defendant}`);
+      }
+    } catch (err) {
+      alert('❌ Failed to submit report: ' + (err.message || 'Unknown error'));
+    }
+  });
+}
+
+// ============================================================================
+// 🔹 ADD CHARGE ROW WITH PENAL CODE DROPDOWN + BAIL AMOUNT
+// ============================================================================
+function addChargeRow(containerId, penalCodes = []) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  const row = document.createElement('div');
+  row.className = 'charge-row flex gap-2 mb-2 items-start';
+  
+  // Build Penal Code options with Fine $ data attribute
+  const pcOptions = penalCodes.map(pc => `
+    <option value="${pc.Code || ''}" 
+            data-level="${pc.Level || ''}" 
+            data-bail="${pc.Fine || 0}"
+            data-offense="${pc.Offense || ''}">
+      ${pc.Code || ''} - ${pc.Offense || ''} (${pc.Level || ''}) - $${Number(pc.Fine || 0).toLocaleString()}
+    </option>
+  `).join('');
+  
+  row.innerHTML = `
+    <select class="chargeCode w-1/2 p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm">
+      <option value="">Select Penal Code</option>
+      ${pcOptions}
+    </select>
+    <textarea placeholder="Description (optional)" class="chargeDesc w-1/2 p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm" rows="1"></textarea>
+    <button type="button" class="remove-charge text-red-400 hover:text-red-300 text-xl font-bold" title="Remove">✖</button>
+  `;
+  
+  container.appendChild(row);
+  
+  // Remove handler
+  row.querySelector('.remove-charge').addEventListener('click', () => {
+    row.remove();
+    updateReportBail();
+  });
+  
+  // Bail calculation on change - pulls from data-bail attribute
+  row.querySelector('.chargeCode').addEventListener('change', updateReportBail);
+  
+  updateReportBail();
+}
+
+// ============================================================================
+// 🔹 ADD EVIDENCE URL FIELD
+// ============================================================================
+function addEvidenceUrlField() {
+  const container = document.getElementById('evidenceUrlsContainer');
+  if (!container) return;
+  
+  // Limit to 5 URLs max
+  if (container.children.length >= 5) {
+    alert('Maximum 5 evidence URLs allowed per report.');
+    return;
+  }
+  
+  const div = document.createElement('div');
+  div.className = 'flex gap-2 items-center';
+  div.innerHTML = `
+    <input type="url" name="evidenceUrl" class="flex-1 p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="https://example.com/evidence">
+    <button type="button" onclick="removeEvidenceUrlField(this)" class="text-red-400 hover:text-red-300 text-xl font-bold" title="Remove">×</button>
+  `;
+  
+  container.appendChild(div);
+  
+  // Show/hide remove buttons
+  container.querySelectorAll('button[onclick^="removeEvidenceUrlField"]').forEach(btn => {
+    btn.classList.toggle('hidden', container.children.length <= 1);
+  });
+}
+
+function removeEvidenceUrlField(btn) {
+  const container = document.getElementById('evidenceUrlsContainer');
+  if (!container || container.children.length <= 1) return;
+  
+  btn.closest('.flex').remove();
+  
+  // Show/hide remove buttons
+  container.querySelectorAll('button[onclick^="removeEvidenceUrlField"]').forEach(btn => {
+    btn.classList.toggle('hidden', container.children.length <= 1);
+  });
+}
+
+// ============================================================================
+// 🔹 UPDATE BAIL TOTAL - Pulls from PenalCode Fine $ data attribute
+// ============================================================================
+function updateReportBail() {
+  let total = 0;
+  document.querySelectorAll('.charge-row').forEach(row => {
+    // Get bail amount from data-bail attribute (Fine $ from PenalCode sheet)
+    const bail = parseFloat(row.querySelector('.chargeCode')?.dataset?.bail || 0);
+    total += bail;
+  });
+  const bailInput = document.getElementById('bailTotal');
+  if (bailInput) bailInput.value = total;
+  return total;
+}
+
+// ============================================================================
+// 🔹 WRAPPER FUNCTIONS FOR DASHBOARD BUTTONS
+// ============================================================================
+function showPoliceReportForm() {
+  showCriminalReportForm('police');
+}
+
+function showPDReportForm() {
+  showCriminalReportForm('pd');
 }
 
 // ============================================
@@ -499,6 +877,15 @@ async function renderDashboardByRole() {
           <button id="issueMarriageBtn" class="btn-secondary py-2 px-4 rounded-lg opacity-75 cursor-not-allowed" title="Coming soon">💒 Issue Marriage Certificates</button>
         </div>
       </div>
+      <!-- ✅ TRUST REQUESTS SECTION for Clerks -->
+      <div class="card p-6 mb-6">
+        <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+          <i data-lucide="dollar-sign"></i> Trust Account Requests
+        </div>
+        <div id="trustRequestsContainer" class="space-y-2">
+          <div class="text-gray-400 text-sm">Loading trust requests...</div>
+        </div>
+      </div>
     `;
   } else if (role === 'judge') {
     roleSpecific = `
@@ -674,6 +1061,15 @@ async function renderDashboardByRole() {
           <button id="issueMarriageBtn" class="btn-secondary py-2 px-4 rounded-lg opacity-75 cursor-not-allowed" title="Coming soon">💒 Issue Marriage Certificates</button>
         </div>
       </div>
+      <!-- ✅ TRUST REQUESTS SECTION for Admins -->
+      <div class="card p-6 mb-6">
+        <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+          <i data-lucide="dollar-sign"></i> Trust Account Requests
+        </div>
+        <div id="trustRequestsContainer" class="space-y-2">
+          <div class="text-gray-400 text-sm">Loading trust requests...</div>
+        </div>
+      </div>
     `;
   } else if (role === 'chief_justice') {
     roleSpecific = `
@@ -703,6 +1099,15 @@ async function renderDashboardByRole() {
           <button id="issueMarriageBtn" class="btn-secondary py-2 px-4 rounded-lg opacity-75 cursor-not-allowed" title="Coming soon">💒 Issue Marriage Certificates</button>
         </div>
       </div>
+      <!-- ✅ TRUST REQUESTS SECTION for CJ -->
+      <div class="card p-6 mb-6">
+        <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
+          <i data-lucide="dollar-sign"></i> Trust Account Requests
+        </div>
+        <div id="trustRequestsContainer" class="space-y-2">
+          <div class="text-gray-400 text-sm">Loading trust requests...</div>
+        </div>
+      </div>
     `;
   }
   
@@ -725,6 +1130,11 @@ async function renderDashboardByRole() {
   // Render notifications in the container
   if (typeof renderDojNotifications === 'function') {
     renderDojNotifications();
+  }
+  
+  // Render trust requests for Clerk/Admin/CJ roles
+  if (role === 'clerk' || role === 'admin' || role === 'master_clerk' || role === 'chief_justice') {
+    renderTrustRequests();
   }
   
   // Attach event listeners
@@ -848,7 +1258,7 @@ function attachDashboardEventListeners(role) {
   
   // Role-specific buttons
   if (role === 'judge') {
-    // ✅ Recusal button - use new modal
+    // ✅ Recusal button - use new modal with dynamic role text
     document.getElementById('recusalBtn')?.addEventListener('click', () => {
       if (typeof showRecusalModal === 'function') {
         showRecusalModal();
@@ -862,7 +1272,7 @@ function attachDashboardEventListeners(role) {
       alert('📝 Sentencing form (coming soon)\n\nThis will allow you to upload professional sentencing letters to the Drive folder and update the CaseRegistry.');
     });
     
-    // ✅ Official Letter button - use new modal
+    // ✅ Official Letter button - use new modal with fixed preview
     document.getElementById('officialLetterBtn')?.addEventListener('click', () => {
       if (typeof showOfficialLetterModal === 'function') {
         showOfficialLetterModal();
@@ -871,7 +1281,8 @@ function attachDashboardEventListeners(role) {
       }
     });
     
-  } else if (role === 'attorney') {
+  } else if (role === 'attorney' || role === 'public_defender' || role === 'district_attorney') {
+    // ✅ Recusal button for attorneys/PD/DA - use dynamic role modal
     document.getElementById('recusalBtn')?.addEventListener('click', () => {
       if (typeof showRecusalModal === 'function') {
         showRecusalModal();
@@ -879,16 +1290,25 @@ function attachDashboardEventListeners(role) {
         alert('Recusal request form (coming soon)');
       }
     });
-    document.getElementById('trustWithdrawalBtn')?.addEventListener('click', () => alert('Trust withdrawal form (coming soon)'));
-    document.getElementById('trustDepositBtn')?.addEventListener('click', () => alert('Trust deposit form (coming soon)'));
+    
+    // ✅ Trust Account buttons - use new trust request system
+    document.getElementById('trustWithdrawalBtn')?.addEventListener('click', () => {
+      if (typeof showTrustRequestModal === 'function') {
+        showTrustRequestModal('withdrawal');
+      } else {
+        alert('Trust withdrawal form (coming soon)');
+      }
+    });
+    
+    document.getElementById('trustDepositBtn')?.addEventListener('click', () => {
+      if (typeof showTrustRequestModal === 'function') {
+        showTrustRequestModal('deposit');
+      } else {
+        alert('Trust deposit form (coming soon)');
+      }
+    });
+    
   } else if (role === 'public_defender') {
-    document.getElementById('recusalBtn')?.addEventListener('click', () => {
-      if (typeof showRecusalModal === 'function') {
-        showRecusalModal();
-      } else {
-        alert('Recusal request form (coming soon)');
-      }
-    });
     document.getElementById('pdReportBtn')?.addEventListener('click', () => {
       if (typeof showPDReportForm === 'function') {
         showPDReportForm();
@@ -1165,6 +1585,86 @@ function showTrainingModal(role) {
 }
 
 // ============================================================================
+// 🔹 RENDER TRUST REQUESTS (for Clerks/Admin/CJ)
+// ============================================================================
+async function renderTrustRequests() {
+  const container = document.getElementById('trustRequestsContainer');
+  if (!container) return;
+  
+  try {
+    // Fetch from TrustRequests sheet via getSheetData action
+    const result = await apiCall('getSheetData', { sheetName: 'TrustRequests' });
+    const requests = (result.data || []).filter(r => r.status === 'pending');
+    
+    if (requests.length === 0) {
+      container.innerHTML = '<div class="text-gray-400 text-sm">No pending trust requests</div>';
+      return;
+    }
+    
+    container.innerHTML = requests.map(req => `
+      <div class="border border-gray-700 rounded p-3 bg-gray-800/50">
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <strong class="text-white">${req.request_type?.toUpperCase()} Request</strong>
+            <div class="text-sm text-gray-400">From: ${req.requestor_name}</div>
+          </div>
+          <div class="text-right">
+            <div class="text-[#c9a227] font-semibold">$${Number(req.amount || 0).toLocaleString()}</div>
+            <div class="text-xs text-gray-500">${new Date(req.created_at).toLocaleDateString()}</div>
+          </div>
+        </div>
+        <p class="text-sm text-gray-300 mb-2">${req.reason}</p>
+        ${req.case_no ? `<div class="text-xs text-gray-400 mb-1">Case: ${req.case_no}</div>` : ''}
+        ${req.attachment_url ? `<a href="${req.attachment_url}" target="_blank" class="text-blue-400 text-xs hover:underline">🔗 View Attachment</a><br>` : ''}
+        <div class="flex gap-2 mt-2">
+          <button onclick="respondToTrustRequest(${req.id}, 'approved')" class="btn-primary text-xs py-1 px-3 rounded">✓ Approve</button>
+          <button onclick="respondToTrustRequest(${req.id}, 'denied')" class="btn-secondary text-xs py-1 px-3 rounded text-red-400">✕ Deny</button>
+          <button onclick="startTrustConversation(${req.id}, '${req.requestor_name}')" class="btn-secondary text-xs py-1 px-3 rounded">💬 Respond</button>
+        </div>
+      </div>
+    `).join('');
+    
+  } catch (err) {
+    console.error('Failed to load trust requests:', err);
+    container.innerHTML = '<div class="text-red-400 text-sm">Error loading trust requests</div>';
+  }
+}
+
+// ============================================================================
+// 🔹 RESPOND TO TRUST REQUEST
+// ============================================================================
+async function respondToTrustRequest(requestId, action) {
+  try {
+    await apiCall('respondToTrustRequest', {
+      requestId,
+      status: action,
+      responded_by: currentUser.name,
+      response_notes: action === 'approved' ? 'Approved by ' + currentUser.name : 'Denied by ' + currentUser.name
+    });
+    alert(`✅ Trust request ${action}.`);
+    renderTrustRequests();
+  } catch (err) {
+    alert('❌ Failed to respond: ' + err.message);
+  }
+}
+
+// ============================================================================
+// 🔹 START TRUST CONVERSATION (Threaded messaging)
+// ============================================================================
+function startTrustConversation(requestId, requestorName) {
+  if (typeof showCommunicationModal === 'function') {
+    // Open modal pre-filled for direct reply to requestor
+    window.replyContext = {
+      replyTo: requestorName,
+      threadId: `trust_${requestId}`,
+      subject: `Trust Request #${requestId}`,
+      message: `Regarding your trust account request #${requestId}...`
+    };
+    showCommunicationModal('any', requestorName);
+  }
+}
+
+// ============================================================================
 // 🔹 MAKE FUNCTIONS GLOBALLY ACCESSIBLE
 // ============================================================================
 window.renderDashboardByRole = renderDashboardByRole;
@@ -1175,8 +1675,12 @@ window.renderDADashboard = renderDADashboard;
 window.attachDAEventListeners = attachDAEventListeners;
 window.showRecusalQueue = showRecusalQueue;
 window.submitRecusal = submitRecusal; // Keep for backward compatibility
-window.showRecusalModal = showRecusalModal; // NEW: Full recusal modal
-window.showOfficialLetterModal = showOfficialLetterModal; // NEW: Official letter modal
+window.showRecusalModal = showRecusalModal; // NEW: Full recusal modal with dynamic role
+window.showOfficialLetterModal = showOfficialLetterModal; // NEW: Fixed preview + URL field
+window.showTrustRequestModal = showTrustRequestModal; // NEW: Trust account requests
+window.renderTrustRequests = renderTrustRequests; // NEW: Render trust requests for clerks
+window.respondToTrustRequest = respondToTrustRequest; // NEW: Respond to trust requests
+window.startTrustConversation = startTrustConversation; // NEW: Start threaded conversation
 window.showPDReportForm = showPDReportForm;
 window.showPoliceReportForm = showPoliceReportForm;
 window.requestTransport = requestTransport;
@@ -1185,3 +1689,9 @@ window.reportManhunt = reportManhunt;
 window.submitSecurityReport = submitSecurityReport;
 window.showTrainingModal = showTrainingModal;
 window.formatDateForDisplay = formatDateForDisplay;
+window.showCriminalReportForm = showCriminalReportForm; // NEW: Enhanced criminal report with PenalCode bail
+window.addChargeRow = addChargeRow;
+window.addEvidenceUrlField = addEvidenceUrlField;
+window.removeEvidenceUrlField = removeEvidenceUrlField;
+window.updateReportBail = updateReportBail;
+window.getBailAmountForCode = getBailAmountForCode;
