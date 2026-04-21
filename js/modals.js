@@ -38,6 +38,27 @@ function showModal(contentHtml) {
     };
   }
 }
+/* Scrollable container for modal content */
+.modal-scroll-container {
+  max-height: 80vh;
+  overflow-y: auto;
+  padding-right: 0.5rem; /* Space for scrollbar */
+}
+
+/* Hide scrollbar visually but keep functionality */
+.modal-scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+.modal-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+.modal-scroll-container::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 3px;
+}
+.modal-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
 
 /**
  * Show Quick Guide modal
