@@ -99,37 +99,46 @@ function showRecusalModal() {
     </div>
   `);
   
-  // Attach submit handler
+  // Attach submit handler - ✅ FIXED: Null-safe DOM queries + payload validation
   document.getElementById('submitRecusalBtn')?.addEventListener('click', async () => {
-    const caseId = document.getElementById('recusalCaseId')?.value?.trim();
-    const explanation = document.getElementById('recusalExplanation')?.value?.trim();
-    const evidenceUrl = document.getElementById('recusalEvidence')?.value?.trim();
+    const caseIdEl = document.getElementById('recusalCaseId');
+    const explanationEl = document.getElementById('recusalExplanation');
+    const evidenceEl = document.getElementById('recusalEvidence');
+    
+    const caseId = caseIdEl?.value?.trim() || '';
+    const explanation = explanationEl?.value?.trim() || '';
+    const evidenceUrl = evidenceEl?.value?.trim() || '';
     
     // Collect selected grounds
     const grounds = [];
-    if (document.getElementById('groundPersonal')?.checked) grounds.push('Personal involvement');
-    if (document.getElementById('groundCharacter')?.checked) grounds.push('Character connection');
-    if (document.getElementById('groundBias')?.checked) grounds.push('Bias or prejudice');
-    if (document.getElementById('groundFinancial')?.checked) grounds.push('Financial interest');
-    if (document.getElementById('groundPrior')?.checked) grounds.push('Prior involvement');
-    if (document.getElementById('groundAppearance')?.checked) grounds.push('Appearance of bias');
+    const groundIds = ['groundPersonal', 'groundCharacter', 'groundBias', 'groundFinancial', 'groundPrior', 'groundAppearance'];
+    const groundLabels = ['Personal involvement', 'Character connection', 'Bias or prejudice', 'Financial interest', 'Prior involvement', 'Appearance of bias'];
     
-    if (!caseId || grounds.length === 0) {
-      alert('Please enter a Case # and select at least one ground for recusal.');
+    groundIds.forEach((id, idx) => {
+      const el = document.getElementById(id);
+      if (el?.checked) grounds.push(groundLabels[idx]);
+    });
+    
+    if (!caseId) {
+      alert('❌ Case Number is required.');
+      caseIdEl?.focus();
+      return;
+    }
+    if (grounds.length === 0) {
+      alert('Please select at least one ground for recusal.');
       return;
     }
     
     const reason = grounds.join('; ') + (explanation ? ` | ${explanation}` : '');
     
     try {
-      // ✅ FIX: Ensure all values are defined and non-null before passing to apiCall
+      // ✅ Payload with null-safe values
       const payload = {
-        caseId: caseId || '',
+        caseId: caseId,
         requestor: currentUser?.name || 'Unknown',
-        reason: reason || '',
-        evidenceUrl: evidenceUrl || ''
+        reason: reason,
+        evidenceUrl: evidenceUrl
       };
-if (!payload.caseId) { alert('Case # required'); return; }
       
       await apiCall('submitRecusal', payload);
       
@@ -145,7 +154,7 @@ if (!payload.caseId) { alert('Case # required'); return; }
       alert('❌ Failed to submit recusal: ' + (err.message || 'Unknown error'));
     }
   });
-} // ✅ CLOSES showRecusalModal function
+} // ✅ CLOSES showRecusalModal
 
 // ============================================================================
 // 🔹 OFFICIAL LETTER MODAL - Fixed Preview + Validation + Multi-URL Support
@@ -257,26 +266,30 @@ function showOfficialLetterModal() {
   typeSelect?.addEventListener('change', updatePreview);
   urlInput?.addEventListener('input', updatePreview);
   
-  // Generate and upload letter - ✅ PROPERLY CLOSED EVENT LISTENER
+  // Generate and upload letter - ✅ FIXED: Proper validation + API call
   document.getElementById('generateLetterBtn')?.addEventListener('click', async () => {
-    const caseNo = document.getElementById('letterCaseNo')?.value?.trim();
-    const letterType = document.getElementById('letterType')?.value;
-    const content = document.getElementById('letterContent')?.value?.trim();
-    const additionalUrl = document.getElementById('letterUrl')?.value?.trim();
-    const signature = document.getElementById('letterSignature')?.value?.trim() || currentUser?.name;
+    const caseNoEl = document.getElementById('letterCaseNo');
+    const letterTypeEl = document.getElementById('letterType');
+    const contentEl = document.getElementById('letterContent');
+    const urlEl = document.getElementById('letterUrl');
+    const sigEl = document.getElementById('letterSignature');
     
-    // ✅ VALIDATION: Case # is REQUIRED
+    const caseNo = caseNoEl?.value?.trim() || '';
+    const letterType = letterTypeEl?.value || '';
+    const content = contentEl?.value?.trim() || '';
+    const additionalUrl = urlEl?.value?.trim() || '';
+    const signature = sigEl?.value?.trim() || currentUser?.name || '';
+    
+    // ✅ VALIDATION
     if (!caseNo) {
       alert('❌ Case Number is required. Please enter a valid Case # to link this letter.');
-      document.getElementById('letterCaseNo')?.focus();
+      caseNoEl?.focus();
       return;
     }
-    
     if (!letterType) {
       alert('Please select a Letter Type.');
       return;
     }
-    
     if (!content) {
       alert('Please enter letter content.');
       return;
@@ -341,12 +354,12 @@ function showOfficialLetterModal() {
       
       // ✅ STEP 2: Prepare API payload with null-safe values
       const payload = {
-        caseNo: caseNo || '',
-        letterType: letterType || '',
-        content: content || '',
-        signature: signature || '',
-        letterUrl: additionalUrl || '',
-        letterHtml: letterHtml || '',
+        caseNo: caseNo,
+        letterType: letterType,
+        content: content,
+        signature: signature,
+        letterUrl: additionalUrl,
+        letterHtml: letterHtml,
         judgeName: currentUser?.name || 'Unknown',
         folderId: '15H4kUlsoOOpblHvg6HVjdQXZgGUAGBVI'
       };
@@ -386,15 +399,15 @@ function showOfficialLetterModal() {
       
       alert('❌ Failed to generate letter: ' + errorMsg);
     } finally {
-      // Re-enable button - ✅ PROPERLY CLOSED
+      // Re-enable button
       const btn = document.getElementById('generateLetterBtn');
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = originalText;
       }
     }
-  }); // ✅ CLOSES addEventListener for generateLetterBtn
-} // ✅ CLOSES showOfficialLetterModal function
+  }); // ✅ CLOSES addEventListener
+} // ✅ CLOSES showOfficialLetterModal
 
 // ============================================================================
 // 🔹 TRUST ACCOUNT REQUEST MODAL (Withdrawal/Deposit)
@@ -954,12 +967,18 @@ async function renderDashboardByRole() {
       </div>
     `;
   } else if (role === 'attorney') {
+    // ✅ NEW: Attorney "View My Cases" button
     roleSpecific = `
       <div class="card p-6 mb-6">
         <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
           <i data-lucide="folder"></i> My Cases
         </div>
-        <div class="text-gray-400 text-sm">Case list coming soon</div>
+        <div class="flex flex-wrap gap-3">
+          <button id="viewAttorneyCasesBtn" class="btn-secondary py-2 px-4 rounded-lg">View My Cases</button>
+        </div>
+        <div id="attorneyCasesList" class="mt-3 space-y-2 hidden">
+          <!-- Cases loaded dynamically -->
+        </div>
       </div>
       <div class="card p-6 mb-6">
         <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
@@ -998,16 +1017,15 @@ async function renderDashboardByRole() {
   } else if (role === 'district_attorney') {
     roleSpecific = await renderDADashboard();
   } else if (role === 'police') {
+    // ✅ NEW: Police "Submit Criminal Report to DA" button
     roleSpecific = `
       <div class="card p-6 mb-6">
         <div class="flex items-center gap-2 text-[#facc15] font-semibold text-lg mb-3">
           <i data-lucide="badge-check"></i> Police Dashboard
         </div>
         <p class="text-gray-300 mb-4">File criminal reports for review by the District Attorney.</p>
+        <button id="policeReportBtn" class="btn-secondary py-2 px-4 rounded-lg">Submit Criminal Report to DA</button>
       </div>
-      <button id="policeReportBtn" class="btn-secondary py-2 px-4 rounded-lg">
-  Submit Criminal Report to DA
-</button>
     `;
   } else if (role === 'bailiff') {
     roleSpecific = `
@@ -1326,8 +1344,8 @@ function attachDashboardEventListeners(role) {
       }
     });
     
-  } else if (role === 'attorney' || role === 'public_defender' || role === 'district_attorney') {
-    // ✅ Recusal button for attorneys/PD/DA - use dynamic role modal
+  } else if (role === 'attorney') {
+    // ✅ Recusal button for attorneys
     document.getElementById('recusalBtn')?.addEventListener('click', () => {
       if (typeof showRecusalModal === 'function') {
         showRecusalModal();
@@ -1336,7 +1354,7 @@ function attachDashboardEventListeners(role) {
       }
     });
     
-    // ✅ Trust Account buttons - use new trust request system
+    // ✅ Trust Account buttons
     document.getElementById('trustWithdrawalBtn')?.addEventListener('click', () => {
       if (typeof showTrustRequestModal === 'function') {
         showTrustRequestModal('withdrawal');
@@ -1353,7 +1371,58 @@ function attachDashboardEventListeners(role) {
       }
     });
     
+    // ✅ NEW: Attorney "View My Cases" button
+    document.getElementById('viewAttorneyCasesBtn')?.addEventListener('click', async () => {
+      const listDiv = document.getElementById('attorneyCasesList');
+      if (!listDiv) return;
+      
+      try {
+        listDiv.classList.remove('hidden');
+        listDiv.innerHTML = '<div class="text-gray-400 text-sm">Loading cases...</div>';
+        
+        // ✅ Call backend to get attorney cases (filter by Columns S/T in CaseRegistry)
+        const result = await apiCall('getAttorneyCases', { attorneyName: currentUser.name });
+        
+        if (result.success && result.cases?.length > 0) {
+          listDiv.innerHTML = result.cases.map(c => `
+            <div class="border border-gray-700 rounded p-3 bg-gray-800/50">
+              <div class="flex justify-between items-start">
+                <div>
+                  <strong class="text-white">${c['Case #'] || 'Unknown Case'}</strong><br>
+                  <span class="text-sm text-gray-400">${c['Case Type'] || ''}</span>
+                </div>
+                <span class="text-xs px-2 py-1 rounded ${c.Status === 'Active' ? 'bg-green-900 text-green-300' : 'bg-gray-700 text-gray-300'}">
+                  ${c.Status || 'Unknown'}
+                </span>
+              </div>
+              <div class="mt-2 text-sm text-gray-300">
+                Plaintiff: ${c.Plaintiff || 'N/A'}<br>
+                Defendant: ${c.Defendant || 'N/A'}<br>
+                Assigned Judge: ${c['Assigned Judge'] || 'N/A'}
+              </div>
+              <button onclick="viewCaseDetails('${c['Case #']}')" class="btn-secondary text-xs mt-2 py-1 px-3 rounded">View Details</button>
+            </div>
+          `).join('');
+        } else {
+          listDiv.innerHTML = '<div class="text-gray-400 text-sm">No active cases found</div>';
+        }
+      } catch (err) {
+        console.error('Failed to load attorney cases:', err);
+        listDiv.innerHTML = '<div class="text-red-400 text-sm">Error loading cases</div>';
+      }
+    });
+    
   } else if (role === 'public_defender') {
+    // ✅ Recusal button for PDs
+    document.getElementById('recusalBtn')?.addEventListener('click', () => {
+      if (typeof showRecusalModal === 'function') {
+        showRecusalModal();
+      } else {
+        alert('Recusal request form (coming soon)');
+      }
+    });
+    
+    // ✅ PD Report button
     document.getElementById('pdReportBtn')?.addEventListener('click', () => {
       if (typeof showPDReportForm === 'function') {
         showPDReportForm();
@@ -1361,11 +1430,14 @@ function attachDashboardEventListeners(role) {
         alert('Criminal report form (coming soon)');
       }
     });
+    
   } else if (role === 'district_attorney') {
     if (typeof attachDAEventListeners === 'function') {
       attachDAEventListeners();
     }
+    
   } else if (role === 'police') {
+    // ✅ NEW: Police Report button
     document.getElementById('policeReportBtn')?.addEventListener('click', () => {
       if (typeof showPoliceReportForm === 'function') {
         showPoliceReportForm();
@@ -1373,10 +1445,13 @@ function attachDashboardEventListeners(role) {
         alert('Criminal report form (coming soon)');
       }
     });
+    
   } else if (role === 'bailiff') {
     document.getElementById('serviceProcessBtn')?.addEventListener('click', () => alert('Service of process (coming soon)'));
+    
   } else if (role === 'reporter') {
     document.getElementById('uploadTranscriptBtn')?.addEventListener('click', () => alert('Upload transcript URL (coming soon)'));
+    
   } else if (role === 'admin' || role === 'master_clerk') {
     document.getElementById('userMgmtBtn')?.addEventListener('click', () => window.open(usersSheetUrl, '_blank'));
     document.getElementById('assignJudgeBtn')?.addEventListener('click', () => alert('Auto-assign judges (coming soon)'));
@@ -1396,11 +1471,13 @@ function attachDashboardEventListeners(role) {
     document.getElementById('issueMarriageBtn')?.addEventListener('click', () => {
       alert('💒 Issue Marriage Certificates feature coming soon!\n\nThis will generate and send official marriage certificates.');
     });
+    
   } else if (role === 'marshal') {
     document.getElementById('transportRequestBtn')?.addEventListener('click', () => requestTransport());
     document.getElementById('warrantServiceBtn')?.addEventListener('click', () => serveWarrant());
     document.getElementById('manhuntReportBtn')?.addEventListener('click', () => reportManhunt());
     document.getElementById('securityLogBtn')?.addEventListener('click', () => submitSecurityReport());
+    
   } else if (role === 'chief_justice') {
     document.getElementById('cjViewRecusalsBtn')?.addEventListener('click', () => {
       if (typeof showRecusalQueue === 'function') {
@@ -1710,7 +1787,7 @@ function startTrustConversation(requestId, requestorName) {
 }
 
 // ============================================================================
-// 🔹 MAKE FUNCTIONS GLOBALLY ACCESSIBLE
+// 🔹 MAKE FUNCTIONS GLOBALLY ACCESSIBLE - CRITICAL FOR NAVIGATION
 // ============================================================================
 window.renderDashboardByRole = renderDashboardByRole;
 window.attachDashboardEventListeners = attachDashboardEventListeners;
@@ -1729,4 +1806,14 @@ window.startTrustConversation = startTrustConversation; // NEW: Start threaded c
 window.showPDReportForm = showPDReportForm;
 window.showPoliceReportForm = showPoliceReportForm;
 window.requestTransport = requestTransport;
-window.serveWarrant = serve
+window.serveWarrant = serveWarrant;
+window.reportManhunt = reportManhunt;
+window.submitSecurityReport = submitSecurityReport;
+window.showTrainingModal = showTrainingModal;
+window.formatDateForDisplay = formatDateForDisplay;
+window.showCriminalReportForm = showCriminalReportForm; // NEW: Enhanced criminal report with PenalCode bail
+window.addChargeRow = addChargeRow;
+window.addEvidenceUrlField = addEvidenceUrlField;
+window.removeEvidenceUrlField = removeEvidenceUrlField;
+window.updateReportBail = updateReportBail;
+window.getBailAmountForCode = getBailAmountForCode;
