@@ -144,7 +144,7 @@ async function loadNotifications() {
 
 // ============================================================================
 // 🔹 UPDATE NOTIFICATION BADGE COUNT
-// ✅ Only counts unread *received* messages (not sent by current user)
+// ✅ Only counts unread received messages (not sent by current user)
 // ============================================================================
 function updateNotificationBadge() {
   const badge = document.getElementById('notifBadge');
@@ -171,6 +171,7 @@ function updateNotificationBadge() {
     badge.classList.add('hidden');
   }
 }
+
 // ============================================================================
 // 🔹 RENDER NOTIFICATION DROPDOWN PANEL
 // ✅ Clean text + hide sent messages + instant badge update on click
@@ -275,6 +276,7 @@ function renderNotificationPanel() {
     });
   });
 }
+
 // ============================================================================
 // 🔹 RENDER NOTIFICATIONS IN DASHBOARD (LATEST 5)
 // ✅ Same clean text format, hide sent messages
@@ -332,6 +334,7 @@ function renderDojNotifications() {
     `;
   }).join('');
 }
+
 // ============================================================================
 // 🔹 MARK NOTIFICATION AS READ
 // ============================================================================
@@ -366,11 +369,11 @@ function replyToNotification(senderName, threadId = '') {
   
   if (typeof showCommunicationModal === 'function') {
     // ✅ Store reply context with preserved subject
-    window.replyContext = { 
-      replyTo: senderName, 
-      threadId, 
-      subject: originalSubject, 
-      message: originalMessage 
+    window.replyContext = {
+      replyTo: senderName,
+      threadId,
+      subject: originalSubject,
+      message: originalMessage
     };
     showCommunicationModal('any', 'User');
   }
