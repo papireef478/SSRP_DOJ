@@ -3,7 +3,54 @@
 // ============================================
 
 /**
- * Render a data table
+ * Format date for display (MM/DD/YYYY)
+ * @param {string} dateStr - Date string to format
+ * @returns {string} Formatted date
+ */
+function formatDate(dateStr) {
+  if (!dateStr) return 'N/A';
+  
+  // Already formatted
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) return dateStr;
+  
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    
+    return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
+  } catch (e) {
+    return dateStr;
+  }
+}
+
+/**
+ * Get CSS class for status value
+ * @param {string} status - Status value
+ * @returns {string} CSS class
+ */
+function getStatusClass(status) {
+  if (!status) return '';
+  
+  const val = String(status).toLowerCase();
+  
+  if (val.includes('active') || val.includes('approved') || val.includes('completed')) {
+    return 'text-green-400 font-medium';
+  }
+  if (val.includes('pending') || val.includes('processing')) {
+    return 'text-yellow-400 font-medium';
+  }
+  if (val.includes('denied') || val.includes('rejected') || val.includes('closed')) {
+    return 'text-red-400 font-medium';
+  }
+  if (val.includes('expired') || val.includes('inactive')) {
+    return 'text-gray-400 font-medium line-through';
+  }
+  
+  return '';
+}
+
+/**
+ * Render a data table with proper formatting
  * @param {string} tableId - Table element ID
  * @param {Array} records - Array of record objects
  * @param {Array} headers - Column headers
@@ -12,10 +59,16 @@
  */
 function renderTable(tableId, records, headers, fieldMap, statusField = null) {
   const table = document.getElementById(tableId);
-  if (!table) return;
+  if (!table) {
+    console.error('Table not found:', tableId);
+    return;
+  }
   
   const tbody = table.querySelector('tbody');
-  if (!tbody) return;
+  if (!tbody) {
+    console.error('Table body not found in:', tableId);
+    return;
+  }
   
   if (!records || records.length === 0) {
     tbody.innerHTML = `<tr><td colspan="${headers.length}" class="text-center text-gray-500 py-4">No records found</td></tr>`;
@@ -27,8 +80,35 @@ function renderTable(tableId, records, headers, fieldMap, statusField = null) {
       let value = record[fieldMap[h]] || 'N/A';
       
       // Format dates
-      if (h.toLowerCase().includes('date') || h.toLowerCase().includes('timestamp')) {
+      if (h.toLowerCase().includes('date') || h.toLowerCase().includes('timestamp') || h.toLowerCase().includes('expires')) {
         value = formatDate(value);
+      }
+      
+      // ✅ Make Certificate # a hyperlink if Certificate URL column has value (Marriage Registry)
+      if (tableId === 'marriageTable' && h === 'Certificate #') {
+        const certUrl = record.certificateUrl || '';
+        if (certUrl && certUrl.startsWith('http')) {
+          value = `<a href="${certUrl}" target="_blank" class="text-blue-400 hover:underline">${value}</a>`;
+        }
+      }
+      
+      // ✅ Make Case # a hyperlink if Official Letter URL column has value (Case Docket)
+      if (tableId === 'casesTable' && h === 'Case #') {
+        const letterUrls = [];
+        // Check columns U-Y for official letter URLs
+        for (let i = 1; i <= 5; i++) {
+          const urlKey = `Official Letter URL #${i}`;
+          const url = record[urlKey] || '';
+          if (url && url.startsWith('http')) {
+            letterUrls.push(url);
+          }
+        }
+        if (letterUrls.length > 0) {
+          // Show first URL as link, others in tooltip
+          const firstUrl = letterUrls[0];
+          const tooltip = letterUrls.length > 1 ? `title="${letterUrls.length} document(s) linked"` : '';
+          value = `<a href="${firstUrl}" target="_blank" class="text-blue-400 hover:underline" ${tooltip}>${value}</a>`;
+        }
       }
       
       // Add status styling
@@ -53,6 +133,8 @@ function renderTable(tableId, records, headers, fieldMap, statusField = null) {
  * @returns {Array} Filtered records
  */
 function filterTable(records, headers, fieldMap, searchTerm) {
+  if (!searchTerm) return records;
+  
   const term = searchTerm.toLowerCase();
   return records.filter(record =>
     headers.some(h => String(record[fieldMap[h]] || '').toLowerCase().includes(term))
@@ -60,22 +142,143 @@ function filterTable(records, headers, fieldMap, searchTerm) {
 }
 
 /**
- * Render Public Records page
+ * Debounce function for search input
+ * @param {Function} func - Function to debounce
+ * @param {number} wait - Wait time in ms
+ * @returns {Function} Debounced function
+ */
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+/**
+ * Fetch sheet data via API
+ * @param {string} sheetName - Name of the sheet to fetch
+ * @returns {Promise<Array>} Array of records
+ */
+async function fetchSheetData(sheetName) {
+  try {
+    const result = await apiCall('getSheetData', { sheetName });
+    return result.data || [];
+  } catch (err) {
+    console.error(`Failed to fetch ${sheetName}:`, err);
+    return [];
+  }
+}
+
+/**
+ * Render Public Records page with all registries
  */
 async function renderPublicRecords() {
   const recordsDiv = document.getElementById('publicRecordsSection');
   if (!recordsDiv) return;
   
+  // Show loading state
+  recordsDiv.innerHTML = `
+    <div class="card p-6">
+      <div class="text-center text-gray-400 py-8">
+        <div class="animate-spin inline-block w-8 h-8 border-2 border-[#c9a227] border-t-transparent rounded-full mb-4"></div>
+        <p>Loading public records...</p>
+      </div>
+    </div>
+  `;
+  
+  // Fetch all data in parallel
+  const [marriages, properties, professionals, cases] = await Promise.all([
+    fetchSheetData('MarriageRegistry'),
+    fetchSheetData('PropertyRegistry'),
+    fetchSheetData('ProfessionalRegistry'),
+    fetchSheetData('CaseRegistry')
+  ]);
+  
+  // Map Marriage Registry with certificate URL support
+  const mappedMarriages = marriages.map(r => ({
+    cert: r['Certificate #'] || '',
+    spouse1: r['Spouse 1'] || '',
+    spouse2: r['Spouse 2'] || '',
+    date: r['Marriage Date'] || r['Date'] || '',
+    officiant: r['Officiant'] || '',
+    status: r['Status'] || '',
+    certificateUrl: r['Certificate URL'] || r['Certificate Url'] || '' // Column M
+  }));
+  
+  // Map Property Registry
+  const mappedProperties = properties.map(r => ({
+    deed: r['Deed/Transfer #'] || r['Deed #'] || '',
+    type: r['Property Type'] || r['Type'] || '',
+    grantor: r['Grantor (Seller)'] || r['Grantor'] || '',
+    grantee: r['Grantee (Buyer)'] || r['Grantee'] || '',
+    date: r['Transfer Date'] || r['Date'] || ''
+  }));
+  
+  // Map Professional Registry
+  const mappedProfessionals = professionals.map(r => ({
+    entity: r['Entity Name'] || r['Entity'] || '',
+    type: r['TYPE'] || r['Type'] || '',
+    owner: r['Owner Name'] || r['Owner'] || '',
+    license: r['Registration #'] || r['License #'] || '',
+    expires: r['Expires'] || '',
+    notes: r['Notes'] || '',
+    status: r['Status'] || ''
+  }));
+  
+  // Map Case Docket with Official Letter URL support (Columns U-Y)
+  const mappedCases = cases.map(r => {
+    let judgeDisplay = r['Judge'] || r['Assigned Judge'] || 'Pending';
+    if (judgeDisplay === '[Enter Assigned Judge]' || !judgeDisplay || judgeDisplay.trim() === '') {
+      judgeDisplay = 'Pending';
+    }
+    
+    // Collect Official Letter URLs from columns U-Y
+    const letterUrls = [];
+    for (let i = 1; i <= 5; i++) {
+      const urlKey = `Official Letter URL #${i}`;
+      const url = r[urlKey] || '';
+      if (url && url.startsWith('http')) {
+        letterUrls.push(url);
+      }
+    }
+    
+    return {
+      caseNo: r['Case #'] || '',
+      type: r['Case Type'] || r['Type'] || '',
+      plaintiff: r['Plaintiff/Petitioner'] || r['Plaintiff'] || '',
+      defendant: r['Defendant/Respondent'] || r['Defendant'] || '',
+      judge: judgeDisplay,
+      courtLevel: r['Court Level'] || '',
+      filedDate: r['Filing Timestamp'] || r['Filed Date'] || '',
+      status: r['Status'] || '',
+      letterUrls: letterUrls // Store for hyperlink rendering
+    };
+  });
+  
+  // Store for search filtering
+  window.publicData = {
+    marriages: mappedMarriages,
+    properties: mappedProperties,
+    cases: mappedCases,
+    professionals: mappedProfessionals
+  };
+  
+  // Build HTML with tabs
   recordsDiv.innerHTML = `
     <div class="card p-6">
       <div class="flex gap-4 border-b border-gray-700 mb-4 flex-wrap">
-        <button class="tab-btn active" data-tab="marriage">Marriage Registry</button>
-        <button class="tab-btn" data-tab="property">Property Registry</button>
-        <button class="tab-btn" data-tab="professional">Professional Registry</button>
-        <button class="tab-btn" data-tab="cases">Case Docket</button>
+        <button class="tab-btn active px-4 py-2 bg-[#c9a227]/20 text-[#c9a227] rounded-t-lg" data-tab="marriage">Marriage Registry</button>
+        <button class="tab-btn px-4 py-2 hover:bg-gray-700 rounded-t-lg" data-tab="property">Property Registry</button>
+        <button class="tab-btn px-4 py-2 hover:bg-gray-700 rounded-t-lg" data-tab="professional">Professional Registry</button>
+        <button class="tab-btn px-4 py-2 hover:bg-gray-700 rounded-t-lg" data-tab="cases">Case Docket</button>
       </div>
       <div class="mb-4">
-        <input type="text" id="searchInput" placeholder="Search..." class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+        <input type="text" id="searchInput" placeholder="Search records..." class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-[#c9a227]">
       </div>
       
       <!-- Marriage Registry -->
@@ -158,70 +361,6 @@ async function renderPublicRecords() {
     </div>
   `;
   
-  // Fetch all data
-  const [marriages, properties, professionals, cases] = await Promise.all([
-    fetchSheetData('MarriageRegistry'),
-    fetchSheetData('PropertyRegistry'),
-    fetchSheetData('ProfessionalRegistry'),
-    fetchSheetData('CaseRegistry')
-  ]);
-  
-  // Map Marriage Registry
-  const mappedMarriages = marriages.map(r => ({
-    cert: r['Certificate #'] || '',
-    spouse1: r['Spouse 1'] || '',
-    spouse2: r['Spouse 2'] || '',
-    date: r['Marriage Date'] || r['Date'] || '',
-    officiant: r['Officiant'] || '',
-    status: r['Status'] || ''
-  }));
-  
-  // Map Property Registry
-  const mappedProperties = properties.map(r => ({
-    deed: r['Deed/Transfer #'] || r['Deed #'] || '',
-    type: r['Property Type'] || r['Type'] || '',
-    grantor: r['Grantor (Seller)'] || r['Grantor'] || '',
-    grantee: r['Grantee (Buyer)'] || r['Grantee'] || '',
-    date: r['Transfer Date'] || r['Date'] || ''
-  }));
-  
-  // Map Professional Registry
-  const mappedProfessionals = professionals.map(r => ({
-    entity: r['Entity Name'] || r['Entity'] || '',
-    type: r['TYPE'] || r['Type'] || '',
-    owner: r['Owner Name'] || r['Owner'] || '',
-    license: r['Registration #'] || r['License #'] || '',
-    expires: r['Expires'] || '',
-    notes: r['Notes'] || '',
-    status: r['Status'] || ''
-  }));
-  
-  // Map Case Docket
-  const mappedCases = cases.map(r => {
-    let judgeDisplay = r['Judge'] || r['Assigned Judge'] || 'Pending';
-    if (judgeDisplay === '[Enter Assigned Judge]' || !judgeDisplay || judgeDisplay.trim() === '') {
-      judgeDisplay = 'Pending';
-    }
-    return {
-      caseNo: r['Case #'] || '',
-      type: r['Case Type'] || r['Type'] || '',
-      plaintiff: r['Plaintiff/Petitioner'] || r['Plaintiff'] || '',
-      defendant: r['Defendant/Respondent'] || r['Defendant'] || '',
-      judge: judgeDisplay,
-      courtLevel: r['Court Level'] || '',
-      filedDate: r['Filing Timestamp'] || r['Filed Date'] || '',
-      status: r['Status'] || ''
-    };
-  });
-  
-  // Store for search filtering
-  window.publicData = {
-    marriages: mappedMarriages,
-    properties: mappedProperties,
-    cases: mappedCases,
-    professionals: mappedProfessionals
-  };
-  
   // Render initial tables
   renderTable('marriageTable', mappedMarriages,
     ['Certificate #', 'Spouse 1', 'Spouse 2', 'Date', 'Officiant', 'Status'],
@@ -245,7 +384,7 @@ async function renderPublicRecords() {
     { 'Case #': 'caseNo', 'Type': 'type', 'Plaintiff': 'plaintiff', 'Defendant': 'defendant', 'Judge': 'judge', 'Court Level': 'courtLevel', 'Filed Date': 'filedDate', 'Status': 'status' }
   );
   
-  // Search functionality
+  // Search functionality with debounce
   const searchInput = document.getElementById('searchInput');
   const debouncedSearch = debounce((term) => {
     const activeTab = document.querySelector('.tab-content.active')?.id;
@@ -304,6 +443,15 @@ async function renderPublicRecords() {
     btn.addEventListener('click', () => {
       const tab = btn.dataset.tab;
       
+      // Update tab buttons
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('active', 'bg-[#c9a227]/20', 'text-[#c9a227]');
+        b.classList.add('hover:bg-gray-700');
+      });
+      btn.classList.add('active', 'bg-[#c9a227]/20', 'text-[#c9a227]');
+      btn.classList.remove('hover:bg-gray-700');
+      
+      // Update tab content
       document.querySelectorAll('.tab-content').forEach(c => {
         c.classList.remove('active');
         c.classList.add('hidden');
@@ -312,9 +460,6 @@ async function renderPublicRecords() {
       const selected = document.getElementById(`${tab}Tab`);
       selected?.classList.remove('hidden');
       selected?.classList.add('active');
-      
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
       
       // Trigger search to refresh current table
       searchInput?.dispatchEvent(new Event('input'));
@@ -326,3 +471,14 @@ async function renderPublicRecords() {
     lucide.createIcons();
   }
 }
+
+// ============================================================================
+// 🔹 MAKE FUNCTIONS GLOBALLY ACCESSIBLE
+// ============================================================================
+window.renderPublicRecords = renderPublicRecords;
+window.renderTable = renderTable;
+window.filterTable = filterTable;
+window.fetchSheetData = fetchSheetData;
+window.formatDate = formatDate;
+window.getStatusClass = getStatusClass;
+window.debounce = debounce;
