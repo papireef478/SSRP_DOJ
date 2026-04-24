@@ -56,12 +56,10 @@ async function apiCall(action, params = {}, baseUrl = API_URL) {
 
   try {
     // ✅ Make the fetch request with proper headers
-    const response = await fetch(url.toString(), {
-      method: 'GET', // Google Apps Script Web Apps use GET for all requests
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
+   const response = await fetch(url.toString(), {
+  method: 'GET'
+  // No headers — Apps Script handles GET with URL params natively
+});
 
     // ✅ Check for HTTP errors (4xx, 5xx)
     if (!response.ok) {
